@@ -4,7 +4,7 @@ namespace GamePrio;
 
 /// <summary>
 /// Every Win32 / NT call the governor makes, plus the token privileges that let it
-/// touch processes it does not own. Single processor group (<= 64 logical CPUs) only.
+/// touch processes it does not own. Single processor group (64 logical CPUs or fewer) only.
 /// </summary>
 internal static class Native
 {
