@@ -17,6 +17,8 @@ public sealed class Engine : IDisposable
     public Profile Profile { get; private set; }
     public bool IsWatching => _watchCts is { IsCancellationRequested: false };
     public bool IsApplied { get { lock (_gate) return _applied != null; } }
+    /// <summary>True once the game itself is running and has been attached.</summary>
+    public bool GameAttached { get; private set; }
     public string DetectedGame { get; private set; }
 
     /// <summary>Raised whenever watching / applied / detected-game changes.</summary>
@@ -42,6 +44,12 @@ public sealed class Engine : IDisposable
         Raise();
     }
 
+    /// <summary>
+    /// Pressing start goes to max performance IMMEDIATELY - power plan, processor floor,
+    /// core parking, timer resolution, MMCSS, Game DVR, network policy and the background
+    /// sweep all land now, not when a game eventually launches. The watch loop then only
+    /// has to attach the game-specific half when the process appears.
+    /// </summary>
     public void StartWatching()
     {
         if (IsWatching) return;
@@ -51,16 +59,34 @@ public sealed class Engine : IDisposable
             return;
         }
 
+        lock (_gate)
+        {
+            _applied = _governor.BeginSession();
+            GameAttached = false;
+        }
+        Raise();
+
+        // If the game is already running, attach in the same breath.
+        var running = FindGame();
+        if (running != null)
+        {
+            lock (_gate) { _game = running; }
+            _governor.AttachGame(running, _applied);
+            DetectedGame = $"{running.ProcessName} (pid {running.Id})";
+            GameAttached = true;
+            Raise();
+        }
+        else Log.Info($"waiting for {string.Join(", ", Profile.Game.Executables)}");
+
         _watchCts = new CancellationTokenSource();
         var token = _watchCts.Token;
-        Log.Info($"watching for {string.Join(", ", Profile.Game.Executables)}");
-        Raise();
 
         Task.Run(() =>
         {
+            int ticks = 0;
             while (!token.IsCancellationRequested)
             {
-                try { Tick(); }
+                try { Tick(++ticks); }
                 catch (Exception ex) { Log.Error(ex.Message); }
                 try { Task.Delay(1000, token).Wait(token); }
                 catch (OperationCanceledException) { break; }
@@ -78,45 +104,67 @@ public sealed class Engine : IDisposable
         Raise();
     }
 
-    private void Tick()
+    private void Tick(int tick)
     {
-        if (!IsApplied)
+        Journal journal;
+        lock (_gate) journal = _applied;
+        if (journal == null) return;
+
+        if (!GameAttached)
         {
             var game = FindGame();
-            if (game == null) return;
-
-            DetectedGame = $"{game.ProcessName} (pid {game.Id})";
-            Log.Good($"{game.ProcessName} started - applying '{Profile.Name}'");
-            lock (_gate)
+            if (game != null)
             {
-                _game = game;
-                _applied = _governor.Apply(game);
+                Log.Good($"{game.ProcessName} started - attaching");
+                lock (_gate) _game = game;
+                _governor.AttachGame(game, journal);
+                DetectedGame = $"{game.ProcessName} (pid {game.Id})";
+                GameAttached = true;
+                Raise();
             }
-            Raise();
         }
         else
         {
             bool exited;
             try { exited = _game == null || _game.HasExited; } catch { exited = true; }
-            if (!exited) return;
+            if (exited)
+            {
+                // The machine stays at max performance; only the game half is released,
+                // so a match ending does not undo the whole session.
+                Log.Info("game exited - still holding max performance, press stop to release");
+                lock (_gate) { _game?.Dispose(); _game = null; }
+                GameAttached = false;
+                DetectedGame = null;
+                Raise();
+                return;
+            }
+        }
 
-            Log.Info("game exited - restoring");
-            RestoreNow();
+        // Anything launched after the session began still gets pushed out of the way.
+        if (tick % 15 == 0)
+        {
+            Process game;
+            lock (_gate) game = _game;
+            _governor.Resweep(game, journal);
         }
     }
 
+    /// <summary>Max performance now, with or without a game running.</summary>
     public void ApplyNow()
     {
         if (IsApplied) { Log.Warn("already applied"); return; }
+        if (Profile.Game.Executables.Count == 0)
+            Log.Warn("no game ticked - applying machine-level settings only");
+
+        lock (_gate) { _applied = _governor.BeginSession(); GameAttached = false; }
 
         var game = FindGame();
-        if (game == null) { Log.Error("none of the selected games are running"); return; }
-
-        DetectedGame = $"{game.ProcessName} (pid {game.Id})";
-        lock (_gate)
+        if (game != null)
         {
-            _game = game;
-            _applied = _governor.Apply(game);
+            lock (_gate) _game = game;
+            _governor.AttachGame(game, _applied);
+            DetectedGame = $"{game.ProcessName} (pid {game.Id})";
+            GameAttached = true;
         }
         Raise();
     }
@@ -139,6 +187,7 @@ public sealed class Engine : IDisposable
         }
 
         DetectedGame = null;
+        GameAttached = false;
         Raise();
     }
 

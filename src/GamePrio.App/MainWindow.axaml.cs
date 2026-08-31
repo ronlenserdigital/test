@@ -791,27 +791,28 @@ public partial class MainWindow : Window
         SetText("FooterTimer", $"{timerMs:0.###} ms");
         SetText("FooterPower", _powerPlan);
 
-        string state = _engine.IsApplied ? "APPLIED" : _engine.IsWatching ? "WATCHING" : "IDLE";
+        string state = _engine.GameAttached ? "APPLIED" : _engine.IsApplied ? "MAX PERF" : "IDLE";
         SetText("StatusState", state.ToLowerInvariant());
         SetText("StateText", elevated ? state : "NOT ELEVATED");
-        SetText("RingText", _engine.IsApplied ? "OPTIMAL" : _engine.IsWatching ? "ARMED" : "STANDBY");
+        SetText("RingText", _engine.GameAttached ? "OPTIMAL" : _engine.IsApplied ? "MAX" : "STANDBY");
 
-        SetContent("WatchButton", _engine.IsWatching ? "Stop watching" : "Start watching");
-        SetText("HeroStatus", _engine.IsApplied ? "Profile applied"
-                            : _engine.IsWatching ? "Watching profile..."
-                            : "Idle");
+        SetContent("WatchButton", _engine.IsWatching ? "Stop  ·  restore" : "START  ·  MAX PERFORMANCE");
+        SetText("HeroStatus",
+            !_engine.IsApplied ? "Idle - press start to go to max performance"
+            : _engine.GameAttached ? "Max performance applied, game attached"
+            : "Max performance applied - waiting for the game to launch");
 
         var progress = Ctl<ProgressBar>("HeroProgress");
         if (progress != null)
         {
-            progress.IsIndeterminate = _engine.IsWatching && !_engine.IsApplied;
-            progress.Value = _engine.IsApplied ? 100 : 0;
+            progress.IsIndeterminate = _engine.IsApplied && !_engine.GameAttached;
+            progress.Value = _engine.GameAttached ? 100 : 0;
         }
 
         var dot = Ctl<Ellipse>("HeroDot");
         if (dot != null)
             dot.Fill = new SolidColorBrush(Color.Parse(
-                _engine.IsApplied ? "#E01F2D" : _engine.IsWatching ? "#FF8A3C" : "#4A4B54"));
+                _engine.GameAttached ? "#E01F2D" : _engine.IsApplied ? "#FF8A3C" : "#4A4B54"));
 
         var colour = Color.Parse(!elevated ? "#FF9A3C" : _engine.IsApplied ? "#FF4A54" : "#7E7F8A");
         var stateText = Ctl<TextBlock>("StateText");

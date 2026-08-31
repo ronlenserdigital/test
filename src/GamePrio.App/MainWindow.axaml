@@ -130,7 +130,7 @@
                       <TextBlock x:Name="HeroStatus" Text="Idle" FontSize="13" Foreground="#93949E" />
                     </StackPanel>
                   </StackPanel>
-                  <Button Grid.Column="1" x:Name="WatchButton" Classes="danger" Content="Start watching"
+                  <Button Grid.Column="1" x:Name="WatchButton" Classes="danger" Content="START  ·  MAX PERFORMANCE"
                           VerticalAlignment="Center" Click="OnWatchClick" />
                 </Grid>
                 <ProgressBar x:Name="HeroProgress" Height="4" Minimum="0" Maximum="100" Value="0"
@@ -237,7 +237,7 @@
                   </Button>
                 </StackPanel>
                 <TextBlock Classes="body"
-                           Text="Applies the performance profile instantly. All changes are journalled before they are made and are fully reversible - including after a crash or a reboot." />
+                           Text="Start goes to max performance the moment you press it - power plan, processor floor, core parking, timer resolution, MMCSS, Game DVR, network policy and the background sweep all land immediately, without waiting for a game to launch. When the game does start it is attached on top. Everything is journalled before it is done and is fully reversible, including after a crash or a reboot." />
               </StackPanel>
             </Border>
 

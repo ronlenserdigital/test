@@ -28,10 +28,46 @@ public sealed class Governor
 
     // ---------------------------------------------------------------- apply
 
-    /// <summary>True while this apply is running against a kernel-anti-cheat title with safe mode on.</summary>
+    /// <summary>True while this session is governing a kernel-anti-cheat title with safe mode on.</summary>
     public bool SafeModeActive { get; private set; }
 
-    public Journal Apply(Process game)
+    /// <summary>PIDs already recorded this session, so a re-sweep never double-journals one.</summary>
+    private readonly HashSet<int> _journalled = new();
+
+    /// <summary>
+    /// Everything that does not need the game to be running: power plan, processor floor,
+    /// core parking, timer resolution, MMCSS, Game DVR, network policy, and the background
+    /// sweep. This is what "max performance now" means - pressing start should not wait for
+    /// a game to launch before doing any of it.
+    /// </summary>
+    public Journal BeginSession()
+    {
+        _journalled.Clear();
+        SafeModeActive = SafeModeAppliesToSelection();
+
+        if (SafeModeActive)
+            Log.Warn("safe mode: a kernel-anti-cheat title is selected, so the game process " +
+                     "will never be opened. Everything else still applies.");
+        else
+            Native.EnablePrivilege("SeDebugPrivilege");
+
+        var journal = new Journal { Profile = _profile.Name, StartedUtc = DateTime.UtcNow };
+        journal.Save();   // an empty journal first, so even a crash mid-apply is recoverable
+
+        Tuners.ApplySystem(_profile, journal);
+        Tuners.ApplyNetwork(_profile, _profile.Game.Executables.FirstOrDefault(), journal);
+        SweepBackground(null, journal);
+
+        journal.Save();
+        Log.Good("MAX PERFORMANCE applied");
+        return journal;
+    }
+
+    /// <summary>
+    /// The game-specific half, once the process actually exists. In safe mode against a
+    /// kernel-anti-cheat title this deliberately does nothing to the game.
+    /// </summary>
+    public void AttachGame(Process game, Journal journal)
     {
         var entry = GameCatalog.FindByExecutable(game.ProcessName);
         SafeModeActive = _profile.Safety.AntiCheatSafeMode && entry is { AntiCheat: AntiCheat.Kernel };
@@ -40,25 +76,44 @@ public sealed class Governor
         {
             Log.Warn($"{entry.Name} runs kernel anti-cheat ({entry.AntiCheatName}) - SAFE MODE");
             Log.Info("  the game process is not opened at all, nothing is suspended or CPU-capped,");
-            Log.Info("  and SeDebugPrivilege is not requested. Background de-prioritisation,");
-            Log.Info("  power/timer/MMCSS tuning and network QoS still apply.");
+            Log.Info("  and SeDebugPrivilege is not requested.");
         }
         else
         {
-            // Only reach for the privilege that lets us touch processes we do not own
-            // when we are actually going to do the aggressive things.
             Native.EnablePrivilege("SeDebugPrivilege");
+            ApplyToGame(game, journal);
         }
 
-        var journal = new Journal { Profile = _profile.Name, StartedUtc = DateTime.UtcNow };
-        journal.Save();   // an empty journal first, so even a crash mid-apply is recoverable
-
-        if (!SafeModeActive) ApplyToGame(game, journal);
-        ApplyToBackground(game, journal);
-        Tuners.ApplySystem(_profile, journal);
-        Tuners.ApplyNetwork(_profile, game, journal);
-
+        // Anything that started between pressing start and the game launching.
+        SweepBackground(game, journal);
         journal.Save();
+    }
+
+    /// <summary>Catches processes that appeared after the session began.</summary>
+    public void Resweep(Process game, Journal journal)
+    {
+        int before = _journalled.Count;
+        SweepBackground(game, journal);
+        if (_journalled.Count != before)
+        {
+            journal.Save();
+            Log.Dim($"swept {_journalled.Count - before} newly started process(es)");
+        }
+    }
+
+    private bool SafeModeAppliesToSelection()
+    {
+        if (!_profile.Safety.AntiCheatSafeMode) return false;
+        return _profile.Game.Executables
+            .Select(GameCatalog.FindByExecutable)
+            .Any(e => e is { AntiCheat: AntiCheat.Kernel });
+    }
+
+    /// <summary>Kept for the console tool and the benchmark: begin plus attach in one call.</summary>
+    public Journal Apply(Process game)
+    {
+        var journal = BeginSession();
+        AttachGame(game, journal);
         return journal;
     }
 
@@ -112,7 +167,7 @@ public sealed class Governor
         finally { Native.CloseHandle(h); }
     }
 
-    private void ApplyToBackground(Process game, Journal journal)
+    private void SweepBackground(Process game, Journal journal)
     {
         uint priority = Profile.PriorityClassFor(_profile.Background.Priority);
         int touched = 0, suspended = 0, capped = 0;
@@ -121,7 +176,12 @@ public sealed class Governor
         {
             using (proc)
             {
-                if (proc.Id == game.Id || proc.Id == Environment.ProcessId || proc.Id <= 4) continue;
+                if (proc.Id == Environment.ProcessId || proc.Id <= 4) continue;
+                if (game != null && proc.Id == game.Id) continue;
+                if (_journalled.Contains(proc.Id)) continue;          // already handled this session
+
+                // Never govern a selected game, even before it is the detected one.
+                if (_profile.Game.Executables.Contains(proc.ProcessName.ToLowerInvariant())) continue;
 
                 Tier tier = Classify(proc);
                 if (tier == Tier.Never) continue;
@@ -173,6 +233,7 @@ public sealed class Governor
                     if (changed)
                     {
                         journal.Processes.Add(entry);
+                        _journalled.Add(proc.Id);
                         touched++;
                     }
                 }
@@ -180,6 +241,8 @@ public sealed class Governor
                 finally { Native.CloseHandle(h); }
             }
         }
+
+        if (touched == 0) return;
 
         journal.Save();
         Log.Good($"background: {touched} processes re-prioritised" +
@@ -241,6 +304,7 @@ public sealed class Governor
 
         Tuners.RestoreNetwork(journal);
         Tuners.RestoreSystem(journal);
+        _journalled.Clear();
 
         Log.Good($"restored {restored} processes" + (resumed > 0 ? $", resumed {resumed}" : ""));
         Journal.Clear();

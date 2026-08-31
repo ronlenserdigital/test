@@ -44,6 +44,37 @@ Nothing was dropped in the redesign. Every feature is reachable:
 `Export report` writes a timestamped file to your Desktop: machine, full profile, and a
 complete verify pass read back out of Windows.
 
+## What Start actually does
+
+Pressing **START · MAX PERFORMANCE** goes to max performance immediately. It does not
+wait for a game to launch. On the press:
+
+- Ultimate Performance power scheme, 100% processor floor, core parking off
+- Global timer resolution to 0.5 ms
+- MMCSS Games task tuning, Game DVR off
+- Preferred adapter forced to metric 1, DSCP policy on the selected executable, bulk
+  uploaders capped
+- Every background process swept to Idle + EcoQoS + E-cores
+
+The QoS policy no longer needs a live process - the executable name from the library is
+enough - so the network half arms before the game exists.
+
+When the game does start it is **attached** on top: priority, affinity and throttling
+flags, or nothing at all if safe mode applies to that title. A ticked game is never swept
+as a background process, even before it becomes the detected one.
+
+Two behaviours worth knowing:
+
+- **A re-sweep runs every 15 seconds.** Anything launched after you pressed start still
+  gets pushed out of the way, and the journal records each PID once so a re-sweep can
+  never double-journal or double-restore a process.
+- **Quitting the game does not release the machine.** The game half detaches, the machine
+  stays at max performance, and the state pill drops from APPLIED to MAX PERF. Press
+  **Stop · restore** to unwind everything. That way finishing a match and starting another
+  does not tear the whole session down and build it back up.
+
+`Apply now` follows the same path and works with no game running at all.
+
 ## Checking the UI without Windows
 
 `src/GamePrio.UiCheck` constructs the **real** windows - the same compiled XAML that runs

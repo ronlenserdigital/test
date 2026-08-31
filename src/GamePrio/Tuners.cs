@@ -199,17 +199,17 @@ internal static class Tuners
 
     // ---------------------------------------------------------- network
 
-    public static void ApplyNetwork(Profile p, Process game, Journal journal)
+    public static void ApplyNetwork(Profile p, string gameExecutable, Journal journal)
     {
         var n = p.Network;
 
         if (!string.IsNullOrWhiteSpace(n.PreferredInterfaceAlias))
             PreferInterface(n.PreferredInterfaceAlias, journal);
 
-        if (n.Dscp > 0)
+        if (n.Dscp > 0 && !string.IsNullOrWhiteSpace(gameExecutable))
         {
-            string exe = game.ProcessName + ".exe";
-            string policy = "GamePrio-game-" + game.ProcessName;
+            string exe = gameExecutable + ".exe";
+            string policy = "GamePrio-game-" + gameExecutable;
             if (AddQosPolicy(journal, policy,
                     $"-AppPathNameMatchCondition '{exe}' -DSCPAction {Math.Clamp(n.Dscp, 0, 63)} -NetworkProfile All"))
                 Log.Good($"QoS policy marks {exe} with DSCP {n.Dscp} " +
