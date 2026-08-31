@@ -12,10 +12,19 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- Publishing the GUI passes a RID down to this reference; without this it would be
+         treated as a self-contained exe, which a framework-dependent app cannot reference.
+         Override on the command line for a standalone self-contained console build. -->
+    <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
     <None Update="profile.example.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="gameprio-ui" />
+    <InternalsVisibleTo Include="gameprio.tests" />
   </ItemGroup>
 
 </Project>

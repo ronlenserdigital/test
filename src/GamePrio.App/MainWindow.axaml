@@ -1,0 +1,243 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GamePrio.App.MainWindow"
+        Title="gameprio" Width="1180" Height="780"
+        MinWidth="960" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="#0F1218">
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+
+    <!-- header -->
+    <Border Grid.Row="0" Background="#161A22" BorderBrush="#2A313D" BorderThickness="0,0,0,1" Padding="20,14">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+          <TextBlock Text="gameprio" FontSize="20" FontWeight="Bold" Foreground="#E7EAF0" VerticalAlignment="Center" />
+          <Border Background="#1C212B" CornerRadius="3" Padding="7,3" VerticalAlignment="Center">
+            <TextBlock x:Name="VersionText" Text="0.1.0" FontSize="10" Foreground="#868F9F" />
+          </Border>
+          <TextBlock x:Name="TopologyText" Text="" FontSize="11" Foreground="#868F9F" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Border x:Name="ElevationPill" Background="#16291F" CornerRadius="3" Padding="9,4">
+            <TextBlock x:Name="ElevationText" Text="ELEVATED" FontSize="10" FontWeight="Bold" Foreground="#62C295" />
+          </Border>
+          <Border x:Name="StatePill" Background="#1C212B" CornerRadius="3" Padding="9,4">
+            <TextBlock x:Name="StateText" Text="IDLE" FontSize="10" FontWeight="Bold" Foreground="#868F9F" />
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- body -->
+    <Grid Grid.Row="1" ColumnDefinitions="380,*" Margin="16">
+
+      <!-- game library -->
+      <Border Grid.Column="0" Classes="card" Margin="0,0,8,0">
+        <DockPanel LastChildFill="True">
+          <TextBlock DockPanel.Dock="Top" Classes="h" Text="GAME LIBRARY" />
+
+          <TextBox DockPanel.Dock="Top" x:Name="SearchBox" Watermark="Filter games..."
+                   Margin="0,0,0,10" TextChanged="OnSearchChanged" />
+
+          <Border DockPanel.Dock="Bottom" Background="#1C212B" CornerRadius="4" Padding="10" Margin="0,10,0,0">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Add a game not listed" Classes="label" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" x:Name="CustomExeBox" Watermark="MyGame.exe" />
+                <Button Grid.Column="1" Classes="ghost" Content="Add" Margin="6,0,0,0" Click="OnAddCustom" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <TextBlock DockPanel.Dock="Bottom" x:Name="SelectedCount" Classes="label" Text="0 selected" Margin="0,8,0,0" />
+
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="GameList" Spacing="2" />
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+
+      <!-- right pane -->
+      <TabControl Grid.Column="1" Margin="8,0,0,0">
+
+        <TabItem Header="Control">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="0,12,0,0">
+
+              <Border x:Name="AntiCheatBanner" Classes="card" IsVisible="False"
+                      Background="#2E1A18" BorderBrush="#E58A80">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="KERNEL ANTI-CHEAT SELECTED" FontSize="11" FontWeight="Bold" Foreground="#E58A80" />
+                  <TextBlock x:Name="AntiCheatText" TextWrapping="Wrap" FontSize="12" Foreground="#E7EAF0" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="h" Text="STATUS" />
+                  <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="State" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="StatusState" Classes="value" Text="idle" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="Detected game" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="StatusGame" Classes="value" Text="none" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="label" Text="CPU" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="StatusCpu" Classes="value" Text="-" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Classes="label" Text="Timer resolution" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="StatusTimer" Classes="value" Text="-" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="label" Text="Journal" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="StatusJournal" Classes="value" Text="clean" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="12">
+                  <TextBlock Classes="h" Text="CONTROL" />
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="WatchButton" Classes="primary" Content="Start watching" Click="OnWatchClick" />
+                    <Button x:Name="ApplyButton" Classes="ghost" Content="Apply now" Click="OnApplyClick" />
+                    <Button x:Name="RestoreButton" Classes="ghost" Content="Restore everything" Click="OnRestoreClick" />
+                  </StackPanel>
+                  <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
+                             Text="Watching applies the profile the moment a selected game starts and unwinds it when the game exits. Everything is journalled first, so closing this window - or losing power - still restores." />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="h" Text="MEASURE" />
+                  <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#E7EAF0"
+                             Text="Run the A/B benchmark before you trust any of this. It captures baseline and profiled frame times in alternating passes and reports the difference with a confidence interval." />
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="label" Text="Seconds per pass" VerticalAlignment="Center" />
+                    <TextBox x:Name="BenchSeconds" Text="90" Width="70" />
+                    <TextBlock Classes="label" Text="Passes" VerticalAlignment="Center" />
+                    <TextBox x:Name="BenchRuns" Text="2" Width="60" />
+                    <Button x:Name="BenchButton" Classes="ghost" Content="Run benchmark" Click="OnBenchClick" />
+                  </StackPanel>
+                  <TextBlock x:Name="BenchNote" TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
+                             Text="Needs Intel PresentMon on PATH. Park the game somewhere repeatable first." />
+                </StackPanel>
+              </Border>
+
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Settings">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="0,12,0,0">
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="h" Text="THE GAME" />
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="130" />
+                    <ComboBox x:Name="GamePriority" Width="180" SelectedIndex="4">
+                      <ComboBoxItem>Idle</ComboBoxItem>
+                      <ComboBoxItem>BelowNormal</ComboBoxItem>
+                      <ComboBoxItem>Normal</ComboBoxItem>
+                      <ComboBoxItem>AboveNormal</ComboBoxItem>
+                      <ComboBoxItem>High</ComboBoxItem>
+                      <ComboBoxItem>RealTime</ComboBoxItem>
+                    </ComboBox>
+                    <TextBlock x:Name="RealtimeWarning" FontSize="11" Foreground="#D9B45C" VerticalAlignment="Center"
+                               TextWrapping="Wrap" Width="260" IsVisible="False"
+                               Text="RealTime outranks input and audio. It usually costs frame-time consistency." />
+                  </StackPanel>
+                  <CheckBox x:Name="GamePCore" Content="Pin to P-cores only (hybrid CPUs)" />
+                  <CheckBox x:Name="GameNoThrottle" Content="Force power throttling off" />
+                  <CheckBox x:Name="GameIgnoreTimer" Content="Exempt from Windows 11 timer-resolution throttling" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="h" Text="EVERYTHING ELSE" />
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="130" />
+                    <ComboBox x:Name="BackgroundPriority" Width="180" SelectedIndex="0">
+                      <ComboBoxItem>Idle</ComboBoxItem>
+                      <ComboBoxItem>BelowNormal</ComboBoxItem>
+                      <ComboBoxItem>Normal</ComboBoxItem>
+                    </ComboBox>
+                  </StackPanel>
+                  <CheckBox x:Name="BgEco" Content="Efficiency mode (EcoQoS)" />
+                  <CheckBox x:Name="BgECore" Content="Exile to E-cores" />
+                  <CheckBox x:Name="BgSuspend" Content="Suspend the freeze list outright" Click="OnSuspendToggled" />
+                  <TextBlock x:Name="SuspendNote" TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
+                             Text="Freezes browsers, cloud sync, Office, Adobe and chat for the session. Anti-cheat, system and launcher processes are never touched." />
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="label" Text="Hard CPU cap %" VerticalAlignment="Center" Width="130" />
+                    <TextBox x:Name="BgCpuCap" Text="0" Width="70" />
+                    <TextBlock Classes="label" Text="0 = no cap" VerticalAlignment="Center" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="h" Text="THE MACHINE" />
+                  <CheckBox x:Name="SysPower" Content="Ultimate Performance power plan" />
+                  <CheckBox x:Name="SysParking" Content="Disable core parking, 100% processor floor" />
+                  <CheckBox x:Name="SysTimer" Content="Raise global timer resolution to 0.5 ms" />
+                  <CheckBox x:Name="SysMmcss" Content="MMCSS tuning for the Games task class" />
+                  <CheckBox x:Name="SysGameDvr" Content="Disable Game DVR / background recording" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="h" Text="NETWORK" />
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="label" Text="Preferred adapter" VerticalAlignment="Center" Width="130" />
+                    <TextBox x:Name="NetAdapter" Text="Ethernet" Width="180" />
+                    <TextBlock Classes="label" Text="forced to metric 1" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="label" Text="DSCP mark" VerticalAlignment="Center" Width="130" />
+                    <TextBox x:Name="NetDscp" Text="46" Width="70" />
+                    <TextBlock Classes="label" Text="0 = off. Helps on your LAN; stripped past the ISP edge." VerticalAlignment="Center" />
+                  </StackPanel>
+                  <CheckBox x:Name="NetThrottle" Content="Cap Steam / Epic / OneDrive / Dropbox uploads during a session" />
+                  <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
+                             Text="This is the networking lever with a reliable effect: your own uploads filling the uplink queue is the most common self-inflicted source of in-game jitter." />
+                </StackPanel>
+              </Border>
+
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Activity">
+          <Grid RowDefinitions="*,Auto" Margin="0,12,0,0">
+            <Border Grid.Row="0" Classes="card" Padding="2">
+              <TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                       FontFamily="Consolas, monospace" FontSize="12" Background="Transparent"
+                       BorderThickness="0" Foreground="#BCC3D0" />
+            </Border>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+              <Button Classes="ghost" Content="Clear" Click="OnClearLog" />
+              <TextBlock x:Name="LogPathText" Classes="label" VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+        </TabItem>
+
+      </TabControl>
+    </Grid>
+
+    <!-- footer -->
+    <Border Grid.Row="2" Background="#161A22" BorderBrush="#2A313D" BorderThickness="0,1,0,0" Padding="20,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" x:Name="ProfilePathText" Classes="label" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button Classes="ghost" Content="Reload" Click="OnReloadProfile" />
+          <Button Classes="primary" Content="Save profile" Click="OnSaveProfile" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+  </Grid>
+</Window>

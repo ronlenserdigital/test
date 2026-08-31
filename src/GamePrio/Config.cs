@@ -93,6 +93,13 @@ public sealed class Profile
         WriteIndented = true
     };
 
+    public void Save(string path)
+    {
+        string dir = Path.GetDirectoryName(Path.GetFullPath(path));
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        File.WriteAllText(path, JsonSerializer.Serialize(this, Opts));
+    }
+
     public static Profile Load(string path)
     {
         var p = JsonSerializer.Deserialize<Profile>(File.ReadAllText(path), Opts);

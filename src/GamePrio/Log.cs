@@ -2,6 +2,9 @@ namespace GamePrio;
 
 internal static class Log
 {
+    /// <summary>Raised for every line, so a UI can mirror the console stream. (level, message)</summary>
+    public static event Action<string, string> Emitted;
+
     private static readonly object Gate = new();
     private static readonly string LogFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -28,6 +31,9 @@ internal static class Log
                 File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {level} {message}{Environment.NewLine}");
             }
             catch { /* logging must never take the tool down */ }
+
+            try { Emitted?.Invoke(level.Trim(), message); }
+            catch { /* nor must a subscriber */ }
         }
     }
 }

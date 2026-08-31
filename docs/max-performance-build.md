@@ -9,15 +9,53 @@ It is also fully journalled, so every change can be put back exactly.
 
 ---
 
+## Two front ends
+
+`gameprio-ui.exe` is the window: a game library you tick, every setting as a control,
+live status and the full activity log. `gameprio.exe` is the same engine on the command
+line, useful for scripting and for the menu you get by double-clicking it. They share
+one `profile.json` and one journal, so you can drive it either way.
+
+The UI is Avalonia rather than WPF, purely so it could be built and verified in the
+Linux container this was written in; it is a normal Windows window with normal
+minimize / maximize / close.
+
+### The game library
+
+Ships with ~34 titles grouped by what anti-cheat they run, because that is the fact
+that decides what is safe to do:
+
+- **Kernel anti-cheat** - Fortnite (EAC + BattlEye), Call of Duty (Ricochet), Rainbow
+  Six Siege (BattlEye), Valorant (Vanguard), Apex, PUBG, Tarkov, Destiny 2, Rust,
+  The Finals, Marvel Rivals, Delta Force, BF2042, Helldivers 2, League.
+- **User-mode** - CS2, Dota 2, Overwatch 2, Halo Infinite, GTA Online, Elden Ring,
+  Roblox, Rocket League, Star Citizen, Warframe.
+- **None** - Cyberpunk 2077, BG3, Starfield, Hogwarts Legacy, Witcher 3, RDR2,
+  Palworld, Minecraft.
+
+Tick a kernel-anti-cheat title and the Control tab shows a banner naming it. gameprio
+never touches anti-cheat, system or launcher processes and never injects into the game,
+but suspension is the most aggressive thing it does and it is being done while a kernel
+driver watches. Prove a profile on a single-player title first. Anything not in the
+list can be added by executable name.
+
 ## Build and run
 
 ```
-cd src\GamePrio
-dotnet build -c Release
-dotnet publish -c Release -r win-x64 --self-contained false -o publish
-cd publish
-copy profile.example.json profile.json      :: then edit it
+:: the window
+cd src\GamePrio.App
+dotnet publish -c Release -r win-x64 --self-contained false ^
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+
+:: the console tool
+cd ..\GamePrio
+dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish
+copy profile.example.json publish\profile.json      :: then edit it, or just use the UI
 ```
+
+Both need the .NET 8 runtime (`winget install Microsoft.DotNet.Runtime.8`). For a build
+with no runtime dependency at all, add `--self-contained true -p:SelfContained=true`;
+that lands around 35 MB.
 
 `publish` is the one to use: only the `win-x64` publish produces a `gameprio.exe`
 with the `requireAdministrator` manifest embedded, which is what makes UAC prompt.

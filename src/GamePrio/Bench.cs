@@ -80,12 +80,8 @@ internal static class Bench
 
     private static void Countdown(string label, int seconds)
     {
-        for (int s = seconds; s > 0; s--)
-        {
-            Console.Write($"\r  {label} capture starts in {s}s ... ");
-            Thread.Sleep(1000);
-        }
-        Console.WriteLine();
+        Log.Info($"  {label} capture starts in {seconds}s - hands off the game");
+        Thread.Sleep(seconds * 1000);
     }
 
     private static Capture CaptureOnce(Profile profile, string exe, int seconds, string label)
@@ -157,17 +153,17 @@ internal static class Bench
 
     private static void Report(Capture a, Capture b)
     {
-        Console.WriteLine();
-        Console.WriteLine("  metric                baseline    profiled      delta");
-        Console.WriteLine("  ------------------------------------------------------");
+        Log.Info("");
+        Log.Info("  metric                baseline    profiled      delta");
+        Log.Info("  ......................................................");
         Row("average fps", a.AvgFps, b.AvgFps);
         Row("1% low fps", a.OnePercentLowFps, b.OnePercentLowFps);
         Row("0.1% low fps", a.PointOnePercentLowFps, b.PointOnePercentLowFps);
         Row("stutters / min", a.StuttersPerMinute, b.StuttersPerMinute, lowerIsBetter: true);
-        Console.WriteLine();
+        Log.Info("");
 
         var (lo, hi) = Stats.BootstrapMeanFpsDifferenceCI(a.FrameTimesMs, b.FrameTimesMs);
-        Console.WriteLine($"  95% CI on the average-fps difference: {lo:+0.00;-0.00} .. {hi:+0.00;-0.00} fps");
+        Log.Info($"  95% CI on the average-fps difference: {lo:+0.00;-0.00} .. {hi:+0.00;-0.00} fps");
 
         if (lo <= 0 && hi >= 0)
             Log.Warn("  the interval contains zero: this run did NOT measure a real average-fps effect.");
@@ -176,19 +172,18 @@ internal static class Bench
         else
             Log.Error("  the interval is entirely below zero: the profile made average fps WORSE here.");
 
-        Console.WriteLine("  (1% lows are the number to watch - contention shows up as stutter, not as average fps.)");
+        Log.Info("  (1% lows are the number to watch - contention shows up as stutter, not as average fps.)");
     }
 
     private static void Row(string name, double a, double b, bool lowerIsBetter = false)
     {
         double delta = b - a;
         bool better = lowerIsBetter ? delta < 0 : delta > 0;
-        var prev = Console.ForegroundColor;
-        Console.Write($"  {name,-20} {a,9:0.00} {b,11:0.00}   ");
-        Console.ForegroundColor = Math.Abs(delta) < 0.005 ? ConsoleColor.DarkGray
-                                : better ? ConsoleColor.Green : ConsoleColor.Red;
-        Console.WriteLine($"{delta,8:+0.00;-0.00}");
-        Console.ForegroundColor = prev;
+        string line = $"  {name,-20} {a,9:0.00} {b,11:0.00}   {delta,8:+0.00;-0.00}";
+
+        if (Math.Abs(delta) < 0.005) Log.Dim(line);
+        else if (better) Log.Good(line);
+        else Log.Error(line);
     }
 }
 
