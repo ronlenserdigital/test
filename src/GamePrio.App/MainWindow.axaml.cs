@@ -30,35 +30,64 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        // The XAML has to load; if it cannot, there is no window to report anything in
+        // and Program.Main's handler turns it into a message box instead of silence.
         AvaloniaXamlLoader.Load(this);
 
-        _profilePath = ResolveProfilePath();
-        var profile = LoadOrCreateProfile(_profilePath);
-        _engine = new Engine(profile);
-        _engine.Changed += () => Dispatcher.UIThread.Post(RefreshStatus);
+        // Everything past this point is guarded individually. One failing step - a Win32
+        // call, an unreadable profile, a denied privilege - must never cost the whole
+        // window, because a WinExe that throws in its constructor just vanishes.
+        Step("build game list", BuildGameList);
 
-        Log.Emitted += (level, message) => Dispatcher.UIThread.Post(() => AppendLog(level, message));
+        Step("load profile", () =>
+        {
+            _profilePath = ResolveProfilePath();
+            var profile = LoadOrCreateProfile(_profilePath);
+            _engine = new Engine(profile);
+            _engine.Changed += () => Dispatcher.UIThread.Post(RefreshStatus);
+            LoadProfileIntoControls(profile);
+        });
 
-        BuildGameList();
-        LoadProfileIntoControls(profile);
+        Step("attach log", () =>
+        {
+            Log.Emitted += (level, message) => Dispatcher.UIThread.Post(() => AppendLog(level, message));
+            SetText("LogPathText", IOPath.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "GamePrio"));
+        });
 
         // SeDebugPrivilege is requested by Governor.Apply only when safe mode is off.
-        Native.EnablePrivilege("SeIncreaseBasePriorityPrivilege");
-        Native.EnablePrivilege("SeIncreaseQuotaPrivilege");
+        Step("enable privileges", () =>
+        {
+            Native.EnablePrivilege("SeIncreaseBasePriorityPrivilege");
+            Native.EnablePrivilege("SeIncreaseQuotaPrivilege");
+        });
 
-        SetText("LogPathText", IOPath.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "GamePrio"));
-
-        RefreshStatus();
-        RefreshPowerPlanAsync();
+        Step("read status", RefreshStatus);
+        Step("read power plan", RefreshPowerPlanAsync);
 
         Log.Info("STRYKR ready");
         if (!IsElevated())
             Log.Error("not elevated - relaunch as administrator or nothing here can touch another process");
 
-        Task.Run(() => _engine.RecoverStaleState());
+        Step("recover stale journal", () => Task.Run(() => _engine?.RecoverStaleState()));
         Closing += OnClosing;
     }
+
+    /// <summary>Runs one startup step; a failure is reported in the window, not fatal to it.</summary>
+    private void Step(string what, Action action)
+    {
+        try { action(); }
+        catch (Exception ex)
+        {
+            _startupFailures.Add($"{what}: {ex.GetType().Name} {ex.Message}");
+            try { Log.Error($"startup step failed - {what}: {ex.Message}"); } catch { }
+        }
+    }
+
+    private readonly List<string> _startupFailures = new();
+
+    /// <summary>Startup problems, for the smoke test and for support.</summary>
+    public IReadOnlyList<string> StartupFailures => _startupFailures;
 
     // ------------------------------------------------------------ chrome
 
@@ -86,7 +115,7 @@ public partial class MainWindow : Window
 
     private void SetTabState(string name, bool on)
     {
-        var button = this.FindControl<Button>(name);
+        var button = Ctl<Button>(name);
         if (button == null) return;
         if (on) { if (!button.Classes.Contains("on")) button.Classes.Add("on"); }
         else button.Classes.Remove("on");
@@ -96,7 +125,7 @@ public partial class MainWindow : Window
 
     private void BuildGameList()
     {
-        var list = this.FindControl<StackPanel>("GameList");
+        var list = Ctl<StackPanel>("GameList");
         if (list == null) return;
         list.Children.Clear();
         _gameChecks.Clear();
@@ -310,7 +339,7 @@ public partial class MainWindow : Window
         if (_customRows.Any(c => string.Equals(c.Exe, exe, StringComparison.OrdinalIgnoreCase))) return;
         if (GameCatalog.FindByExecutable(exe) != null) return;
 
-        var list = this.FindControl<StackPanel>("GameList");
+        var list = Ctl<StackPanel>("GameList");
         if (list == null) return;
 
         var box = new CheckBox { IsChecked = isChecked, VerticalAlignment = VerticalAlignment.Center };
@@ -334,6 +363,8 @@ public partial class MainWindow : Window
 
     private void RefreshSelection()
     {
+        if (_engine == null) return;
+
         var selected = _gameChecks.Where(kv => kv.Value.IsChecked == true).Select(kv => kv.Key).ToList();
         int titles = selected.Count + _customRows.Count(c => c.Box.IsChecked == true);
         var executables = SelectedExecutables();
@@ -342,7 +373,7 @@ public partial class MainWindow : Window
         SetText("ExecCount", executables.Count == 1 ? "1 executable" : $"{executables.Count} executables");
 
         var kernel = selected.Where(g => g.AntiCheat == AntiCheat.Kernel).ToList();
-        var banner = this.FindControl<Border>("AntiCheatBanner");
+        var banner = Ctl<Border>("AntiCheatBanner");
         if (banner != null) banner.IsVisible = kernel.Count > 0;
         if (kernel.Count > 0)
         {
@@ -403,7 +434,7 @@ public partial class MainWindow : Window
         int seconds = ParseInt("BenchSeconds", 90);
         int runs = ParseInt("BenchRuns", 2);
 
-        var button = this.FindControl<Button>("BenchButton");
+        var button = Ctl<Button>("BenchButton");
         if (button != null) button.IsEnabled = false;
         SetTab(2);
         Log.Info("benchmark starting");
@@ -482,11 +513,11 @@ public partial class MainWindow : Window
         if (advanced) RefreshAdvancedFromProfile(); else RefreshSimpleFromProfile();
     }
 
-    private bool IsAdvanced() => this.FindControl<StackPanel>("AdvancedPanel")?.IsVisible == true;
+    private bool IsAdvanced() => Ctl<StackPanel>("AdvancedPanel")?.IsVisible == true;
 
     private void Style(string name, string cls)
     {
-        var button = this.FindControl<Button>(name);
+        var button = Ctl<Button>(name);
         if (button == null) return;
         button.Classes.Remove("primary");
         button.Classes.Remove("ghost");
@@ -525,6 +556,7 @@ public partial class MainWindow : Window
 
     private void ApplySimpleToProfile()
     {
+        if (_engine == null) return;
         var p = _engine.Profile;
 
         p.Game.Executables = SelectedExecutables();
@@ -561,6 +593,7 @@ public partial class MainWindow : Window
 
     private void RefreshSimpleFromProfile()
     {
+        if (_engine == null) return;
         var p = _engine.Profile;
         _loading = true;
         try
@@ -635,6 +668,7 @@ public partial class MainWindow : Window
 
     private void RefreshAdvancedFromProfile()
     {
+        if (_engine == null) return;
         _loading = true;
         try { RefreshAdvancedFromProfileCore(_engine.Profile); }
         finally { _loading = false; }
@@ -677,6 +711,7 @@ public partial class MainWindow : Window
 
     private void ApplyAdvancedToProfile()
     {
+        if (_engine == null) return;
         var p = _engine.Profile;
 
         p.Game.Executables = SelectedExecutables();
@@ -731,6 +766,7 @@ public partial class MainWindow : Window
 
     private void RefreshStatus()
     {
+        if (_engine == null) return;
         var (hybrid, pCores, eCores, timerMs) = _engine.Topology();
         bool elevated = IsElevated();
 
@@ -757,24 +793,24 @@ public partial class MainWindow : Window
                             : _engine.IsWatching ? "Watching profile..."
                             : "Idle");
 
-        var progress = this.FindControl<ProgressBar>("HeroProgress");
+        var progress = Ctl<ProgressBar>("HeroProgress");
         if (progress != null)
         {
             progress.IsIndeterminate = _engine.IsWatching && !_engine.IsApplied;
             progress.Value = _engine.IsApplied ? 100 : 0;
         }
 
-        var dot = this.FindControl<Ellipse>("HeroDot");
+        var dot = Ctl<Ellipse>("HeroDot");
         if (dot != null)
             dot.Fill = new SolidColorBrush(Color.Parse(
                 _engine.IsApplied ? "#E01F2D" : _engine.IsWatching ? "#FF8A3C" : "#4A4B54"));
 
         var colour = Color.Parse(!elevated ? "#FF9A3C" : _engine.IsApplied ? "#FF4A54" : "#7E7F8A");
-        var stateText = this.FindControl<TextBlock>("StateText");
+        var stateText = Ctl<TextBlock>("StateText");
         if (stateText != null) stateText.Foreground = new SolidColorBrush(colour);
-        var glyph = this.FindControl<Path>("StateGlyph");
+        var glyph = Ctl<Path>("StateGlyph");
         if (glyph != null) glyph.Stroke = new SolidColorBrush(colour);
-        var pill = this.FindControl<Border>("StatePill");
+        var pill = Ctl<Border>("StatePill");
         if (pill != null) pill.BorderBrush = new SolidColorBrush(colour);
     }
 
@@ -790,7 +826,7 @@ public partial class MainWindow : Window
 
     private void AppendLog(string level, string message)
     {
-        var box = this.FindControl<TextBox>("LogBox");
+        var box = Ctl<TextBox>("LogBox");
         if (box == null) return;
 
         string text = box.Text + $"{DateTime.Now:HH:mm:ss}  {level,-4}  {message}{Environment.NewLine}";
@@ -812,50 +848,50 @@ public partial class MainWindow : Window
         catch { return false; }
     }
 
-    private bool Check(string name) => this.FindControl<CheckBox>(name)?.IsChecked == true;
+    /// <summary>
+    /// FindControl&lt;T&gt; THROWS when the named control exists but is another type - it does
+    /// not return null. Every lookup goes through here, which finds the control as a
+    /// Control and casts softly, so a type mismatch is a no-op instead of an exception
+    /// that takes the whole window down.
+    /// </summary>
+    private T Ctl<T>(string name) where T : class => this.FindControl<Control>(name) as T;
+
+    private bool Check(string name) => Ctl<CheckBox>(name)?.IsChecked == true;
 
     private void SetCheck(string name, bool value)
     {
-        var box = this.FindControl<CheckBox>(name);
+        var box = Ctl<CheckBox>(name);
         if (box != null) box.IsChecked = value;
     }
 
-    private string Text(string name)
-    {
-        var box = this.FindControl<TextBox>(name);
-        if (box != null) return box.Text?.Trim();
-        return this.FindControl<TextBlock>(name)?.Text;
-    }
+    private string Text(string name) => Ctl<TextBox>(name)?.Text?.Trim() ?? Ctl<TextBlock>(name)?.Text;
 
     private void SetText(string name, string value)
     {
-        if (this.FindControl<TextBox>(name) is { } box) { box.Text = value; return; }
-        if (this.FindControl<TextBlock>(name) is { } block) block.Text = value;
+        if (Ctl<TextBox>(name) is { } box) { box.Text = value; return; }
+        if (Ctl<TextBlock>(name) is { } block) block.Text = value;
     }
 
     private void SetContent(string name, string value)
     {
-        var button = this.FindControl<Button>(name);
+        var button = Ctl<Button>(name);
         if (button != null) button.Content = value;
     }
 
     private void SetVisible(string name, bool visible)
     {
-        if (this.FindControl<Control>(name) is { } control) control.IsVisible = visible;
+        if (Ctl<Control>(name) is { } control) control.IsVisible = visible;
     }
 
     private int ParseInt(string name, int fallback) =>
         int.TryParse(Text(name), out int value) ? value : fallback;
 
-    private string ComboText(string name)
-    {
-        var combo = this.FindControl<ComboBox>(name);
-        return (combo?.SelectedItem as ComboBoxItem)?.Content?.ToString();
-    }
+    private string ComboText(string name) =>
+        (Ctl<ComboBox>(name)?.SelectedItem as ComboBoxItem)?.Content?.ToString();
 
     private void SetCombo(string name, string value)
     {
-        var combo = this.FindControl<ComboBox>(name);
+        var combo = Ctl<ComboBox>(name);
         if (combo == null) return;
         for (int i = 0; i < combo.ItemCount; i++)
             if (combo.Items[i] is ComboBoxItem item &&

@@ -44,6 +44,32 @@ Nothing was dropped in the redesign. Every feature is reachable:
 `Export report` writes a timestamped file to your Desktop: machine, full profile, and a
 complete verify pass read back out of Windows.
 
+## Checking the UI without Windows
+
+`src/GamePrio.UiCheck` constructs the **real** windows - the same compiled XAML that runs
+on Windows - on Avalonia's headless platform, so it runs on any OS:
+
+```
+cd src\GamePrio.UiCheck
+dotnet run -c Release
+```
+
+It verifies that App.axaml, MainWindow.axaml and HudWindow.axaml load and construct, that
+all 73 controls the code drives by name resolve, that the library populates, and that the
+tab and mode handlers actually fire and toggle the right panels. Win32 startup steps fail
+on non-Windows and are reported as expected; anything else failing is a real bug.
+
+This exists because of a real one. Avalonia's `FindControl<T>` **throws** when the named
+control exists but is a different type - it does not return null. A `SetText` helper that
+tried `FindControl<TextBox>` first and fell back to `TextBlock` therefore threw on every
+TextBlock in the window. Thrown from the constructor of a `WinExe`, that produces no
+window, no console and no error - the process simply exits. Every lookup now goes through
+one helper that finds the control as `Control` and casts softly.
+
+`Program.Main` also installs a last-resort handler: any unhandled exception is appended to
+`%ProgramData%\GamePrio\crash.log` and shown in a message box, and each startup step is
+individually guarded so one failure costs that step rather than the whole window.
+
 ## Two front ends
 
 `strykr.exe` is the window: a game library you tick, every setting as a control,

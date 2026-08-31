@@ -1,0 +1,151 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using GamePrio.App;
+
+namespace GamePrio.UiCheck;
+
+internal static class Program
+{
+    private static int _failed;
+
+    private static void Check(string name, bool ok, string detail = "")
+    {
+        Console.WriteLine($"  [{(ok ? "PASS" : "FAIL")}] {name}{(detail == "" ? "" : "  -> " + detail)}");
+        if (!ok) _failed++;
+    }
+
+    private static int Main()
+    {
+        Console.WriteLine("Application");
+        try
+        {
+            AppBuilder.Configure<GameprioApp>()
+                .UseHeadless(new AvaloniaHeadlessPlatformOptions())
+                .SetupWithoutStarting();
+            Check("App.axaml loads (theme, palette, styles)", true);
+        }
+        catch (Exception ex)
+        {
+            Check("App.axaml loads", false, $"{ex.GetType().Name}: {Flatten(ex)}");
+            return 1;
+        }
+
+        Console.WriteLine("\nMainWindow");
+        MainWindow window = null;
+        try
+        {
+            window = new MainWindow();
+            Check("MainWindow.axaml loads and constructs", true);
+        }
+        catch (Exception ex)
+        {
+            Check("MainWindow.axaml loads and constructs", false, $"{ex.GetType().Name}: {Flatten(ex)}");
+            return 1;
+        }
+
+        // Win32 steps cannot work on this platform; anything else failing is a real bug.
+        var platform = new[] { "read status", "read power plan", "enable privileges", "load profile",
+                               "recover stale journal" };
+        foreach (var failure in window.StartupFailures)
+        {
+            bool expected = platform.Any(p => failure.StartsWith(p, StringComparison.Ordinal));
+            Check($"startup step: {failure[..Math.Min(40, failure.Length)]}", expected,
+                  expected ? "expected off-Windows" : "UNEXPECTED -> " + failure);
+        }
+        if (window.StartupFailures.Count == 0) Check("no startup step failed", true);
+
+        Console.WriteLine("\nControls the code drives by name");
+        string[] required =
+        {
+            "GameList", "SearchBox", "CustomExeBox", "SelectedCount", "ExecCount",
+            "TabControlBtn", "TabSettingsBtn", "TabActivityBtn",
+            "PanelControl", "PanelSettings", "PanelActivity",
+            "HeroGameName", "HeroStatus", "HeroDot", "HeroProgress", "WatchButton",
+            "AntiCheatBanner", "AntiCheatText", "SafeMode",
+            "StatusState", "StatusGame", "StatusCpu", "StatusTimer", "StatusJournal", "StatusPower",
+            "RingText", "StatePill", "StateText", "StateGlyph",
+            "ApplyButton", "RestoreButton", "ViewActivityButton", "VerifyButton",
+            "BenchSeconds", "BenchRuns", "BenchButton", "HudButton",
+            "ModeSimpleBtn", "ModeAdvancedBtn", "SimplePanel", "AdvancedPanel",
+            "SimpleQuiet", "SimpleFullSpeed", "SimpleNoRecording", "SimpleNetwork", "SimpleFreeze", "SimpleSafe",
+            "GamePriority", "GamePCore", "GameNoThrottle", "GameIgnoreTimer", "RealtimeWarning",
+            "BackgroundPriority", "BgEco", "BgECore", "BgSuspend", "BgCpuCap",
+            "SysPower", "SysParking", "SysTimer", "SysMmcss", "SysGameDvr",
+            "NetAdapter", "NetDscp", "NetThrottle",
+            "LogBox", "LogPathText",
+            "FooterProfile", "FooterCpuSet", "FooterCpus", "FooterTimer", "FooterPower", "ExportButton"
+        };
+        var missing = required.Where(n => window.FindControl<Control>(n) == null).ToList();
+        Check($"all {required.Length} named controls resolve", missing.Count == 0,
+              missing.Count == 0 ? "" : "missing: " + string.Join(", ", missing));
+
+        Console.WriteLine("\nGame library");
+        var list = window.FindControl<StackPanel>("GameList");
+        int rows = list?.Children.Count ?? 0;
+        Check("library populated", rows >= GameCatalog.All.Length,
+              $"{rows} rows for {GameCatalog.All.Length} games plus headers");
+
+        Console.WriteLine("\nInteraction (handlers actually fire)");
+        void Click(string name) =>
+            window.FindControl<Button>(name)?.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        bool Visible(string name) => window.FindControl<Control>(name)?.IsVisible == true;
+
+        try
+        {
+            Click("TabSettingsBtn");
+            Check("SETTINGS tab switches", Visible("PanelSettings") && !Visible("PanelControl"));
+
+            Click("ModeAdvancedBtn");
+            Check("Advanced panel shows", Visible("AdvancedPanel") && !Visible("SimplePanel"));
+
+            Click("ModeSimpleBtn");
+            Check("Simple panel shows", Visible("SimplePanel") && !Visible("AdvancedPanel"));
+
+            Click("TabActivityBtn");
+            Check("ACTIVITY tab switches", Visible("PanelActivity") && !Visible("PanelSettings"));
+
+            Click("ViewActivityButton");
+            Check("View activity reaches the log", Visible("PanelActivity"));
+
+            Click("TabControlBtn");
+            Check("CONTROL tab switches back", Visible("PanelControl") && !Visible("PanelActivity"));
+
+            var tab = window.FindControl<Button>("TabControlBtn");
+            Check("active tab carries the underline class", tab != null && tab.Classes.Contains("on"));
+
+            // A preset must not throw even with no engine behind it.
+            Click("ModeSimpleBtn");
+            var presets = window.FindControl<StackPanel>("SimplePanel");
+            Check("simple panel populated", presets != null && presets.Children.Count >= 3);
+        }
+        catch (Exception ex)
+        {
+            Check("interaction", false, $"{ex.GetType().Name}: {Flatten(ex)}");
+        }
+
+        Console.WriteLine("\nHudWindow");
+        try
+        {
+            var hud = new HudWindow(new LiveMonitor());
+            Check("HudWindow.axaml loads and constructs", true);
+            Check("HUD fields resolve",
+                new[] { "FpsText", "FrameTimeText", "LowText", "StutterText", "SystemText", "NoteText" }
+                    .All(n => hud.FindControl<Avalonia.Controls.TextBlock>(n) != null));
+        }
+        catch (Exception ex)
+        {
+            Check("HudWindow.axaml loads and constructs", false, $"{ex.GetType().Name}: {Flatten(ex)}");
+        }
+
+        Console.WriteLine(_failed == 0 ? "\nUI OK" : $"\n{_failed} UI CHECK(S) FAILED");
+        return _failed == 0 ? 0 : 1;
+    }
+
+    private static string Flatten(Exception ex)
+    {
+        var parts = new List<string>();
+        for (var e = ex; e != null; e = e.InnerException) parts.Add(e.Message);
+        return string.Join("  <-  ", parts);
+    }
+}

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Avalonia loads XAML at window-construction time, so a bad property, enum or path
+    geometry compiles cleanly and then kills a WinExe silently on launch. This constructs
+    the REAL windows - the same compiled XAML Windows loads - on a headless platform, so
+    that class of failure surfaces here instead of on the user's desktop.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GamePrio.UiCheck</RootNamespace>
+    <AssemblyName>uicheck</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="11.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../GamePrio.App/GamePrio.App.csproj" />
+  </ItemGroup>
+
+</Project>
