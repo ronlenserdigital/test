@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Compiles the gameprio sources into one assembly with a test entry point, so the
+    platform-independent logic - the statistics, the CSV parser, profile normalisation -
+    can be exercised anywhere, including a Linux CI box. The Win32 layer is not
+    reachable here; it needs the real machine.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GamePrio</RootNamespace>
+    <StartupObject>GamePrio.TestMain</StartupObject>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>gameprio.tests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../GamePrio/*.cs" />
+    <Compile Include="TestMain.cs" />
+  </ItemGroup>
+
+</Project>

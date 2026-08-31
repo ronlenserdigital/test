@@ -14,8 +14,20 @@ It is also fully journalled, so every change can be put back exactly.
 ```
 cd src\GamePrio
 dotnet build -c Release
-cd bin\Release\net8.0-windows
+dotnet publish -c Release -r win-x64 --self-contained false -o publish
+cd publish
 copy profile.example.json profile.json      :: then edit it
+```
+
+`publish` is the one to use: only the `win-x64` publish produces a `gameprio.exe`
+with the `requireAdministrator` manifest embedded, which is what makes UAC prompt.
+A plain `dotnet build` on a non-Windows box gives you `gameprio.dll` and no manifest.
+
+Run the logic tests any time (they need no Windows, no game, no admin):
+
+```
+cd src\GamePrio.Tests
+dotnet run -c Release
 ```
 
 Run from an **elevated** console (the manifest requests admin; UAC will prompt):
@@ -32,9 +44,12 @@ gameprio list                   :: every process and its current priority
 `watch` is the normal mode. Start it, launch the game, play, exit the game — it
 applies and unwinds on its own. Ctrl+C also unwinds.
 
-Not built or run here: this repo's container is Linux and the .NET installer host is
-blocked by the network policy, so **the first `dotnet build` on your machine is the
-first compile this code has ever had.** Expect to fix a thing or two.
+**Build state:** compiles clean on .NET 8 (0 warnings, 0 errors) and publishes to a
+`win-x64` `gameprio.exe` with the admin manifest embedded. The 30 logic checks in
+`src/GamePrio.Tests` all pass. What has *not* run anywhere is the Win32 layer -
+priority, affinity, EcoQoS, suspension, power plan, registry, QoS - because that
+needs a real Windows machine. Your first elevated `gameprio doctor` is its first
+contact with the API surface it is built around.
 
 ---
 
@@ -167,6 +182,25 @@ Requirements and caveats:
 - 90 s × 2 runs per arm is a reasonable floor. Shorter runs mostly measure noise.
 
 ---
+
+## What is verified, and what is not
+
+`src/GamePrio.Tests` compiles the whole app into one assembly with a test entry point,
+so the platform-independent half runs anywhere:
+
+- percentile, mean-of-worst and the 1% / 0.1% low maths
+- frame-time metrics (10 ms frames must read as exactly 100 fps; a flat trace must report zero stutters)
+- **the bootstrap confidence interval** - two identical distributions must produce an
+  interval that straddles zero, a real +20 fps difference must produce one entirely
+  above zero, and the reverse must land entirely below. This is the claim the whole
+  tool rests on, so it is the one most worth a test.
+- PresentMon CSV parsing against both the 1.x lowercase header and the 2.x quoted
+  header, with garbage rows, negative frame times, truncated lines, a missing
+  frame-time column and an empty file
+- profile normalisation, including that `allowTouchingAntiCheat: true` drops the
+  anti-cheat fence but **never** the critical-system fence
+
+Not verified anywhere: every Win32 call. Those need your machine.
 
 ## Known limits
 

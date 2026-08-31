@@ -121,7 +121,7 @@ internal static class Bench
         return capture;
     }
 
-    private static double[] ParseFrameTimes(string csvPath)
+    internal static double[] ParseFrameTimes(string csvPath)
     {
         string[] candidates = { "msbetweenpresents", "msbetweendisplaychange", "framtime", "frametime" };
         var values = new List<double>();
