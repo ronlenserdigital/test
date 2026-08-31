@@ -337,6 +337,18 @@ public partial class MainWindow : Window
 
     private void OnRestoreClick(object sender, RoutedEventArgs e) => Task.Run(() => _engine.RestoreNow());
 
+    private void OnVerifyClick(object sender, RoutedEventArgs e)
+    {
+        ApplyControlsToProfile();
+        var tabs = this.FindControl<TabControl>("MainTabs");
+        if (tabs != null) tabs.SelectedIndex = 2;          // results land in Activity
+        Task.Run(() =>
+        {
+            try { Verify.Run(_engine.Profile, _engine.Governor); }
+            catch (Exception ex) { Log.Error(ex.Message); }
+        });
+    }
+
     private void OnBenchClick(object sender, RoutedEventArgs e)
     {
         ApplyControlsToProfile();

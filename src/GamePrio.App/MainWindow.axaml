@@ -60,7 +60,7 @@
       </Border>
 
       <!-- right pane -->
-      <TabControl Grid.Column="1" Margin="8,0,0,0">
+      <TabControl Grid.Column="1" x:Name="MainTabs" Margin="8,0,0,0">
 
         <TabItem Header="Control">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -101,9 +101,10 @@
                     <Button x:Name="WatchButton" Classes="primary" Content="Start watching" Click="OnWatchClick" />
                     <Button x:Name="ApplyButton" Classes="ghost" Content="Apply now" Click="OnApplyClick" />
                     <Button x:Name="RestoreButton" Classes="ghost" Content="Restore everything" Click="OnRestoreClick" />
+                    <Button x:Name="VerifyButton" Classes="ghost" Content="Verify" Click="OnVerifyClick" />
                   </StackPanel>
                   <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
-                             Text="Watching applies the profile the moment a selected game starts and unwinds it when the game exits. Everything is journalled first, so closing this window - or losing power - still restores." />
+                             Text="Watching applies the profile the moment a selected game starts and unwinds it when the game exits. Everything is journalled first, so closing this window - or losing power - still restores. Verify reads the state back out of Windows and reports it in the Activity tab - it does not consult our own journal, so it tells you what actually happened rather than what we intended." />
                 </StackPanel>
               </Border>
 

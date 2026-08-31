@@ -54,7 +54,8 @@ internal static class Program
             Console.WriteLine("   3   bench     interleaved A/B capture, with a confidence interval");
             Console.WriteLine("   4   apply     apply now to an already-running game");
             Console.WriteLine("   5   restore   undo everything from the journal");
-            Console.WriteLine("   6   list      every process with its current priority");
+            Console.WriteLine("   6   verify    read back what is actually in effect right now");
+            Console.WriteLine("   7   list      every process with its current priority");
             Console.WriteLine("   q   quit");
             Console.WriteLine();
             Console.Write("  > ");
@@ -69,7 +70,8 @@ internal static class Program
                 "3" or "bench" => new[] { "bench" },
                 "4" or "apply" => new[] { "apply" },
                 "5" or "restore" => new[] { "restore" },
-                "6" or "list" => new[] { "list" },
+                "6" or "verify" => new[] { "verify" },
+                "7" or "list" => new[] { "list" },
                 "q" or "quit" or "exit" or "" => null,
                 _ => Array.Empty<string>()
             };
@@ -115,6 +117,7 @@ internal static class Program
                 case "apply": return ApplyOnce(LoadProfile(args));
                 case "restore": return RestoreOnly();
                 case "bench": return RunBench(LoadProfile(args));
+                case "verify": return RunVerify(LoadProfile(args));
                 case "list": return ListProcesses();
                 case "version": Console.WriteLine(Version); return 0;
                 default: PrintHelp(); return 0;
@@ -246,6 +249,12 @@ internal static class Program
         return 0;
     }
 
+    private static int RunVerify(Profile profile)
+    {
+        Verify.Run(profile, new Governor(profile));
+        return 0;
+    }
+
     private static int ListProcesses()
     {
         Console.WriteLine($"{"pid",7}  {"priority",-12} {"session",7}  name");
@@ -362,6 +371,7 @@ gameprio - per-game process and system prioritisation for Windows (personal test
   gameprio restore                      undo everything from the journal
   gameprio bench    --profile p.json [--seconds 90] [--runs 2]
                                         interleaved A/B capture, with a confidence interval
+  gameprio verify   [--profile p.json]   read back what is actually in effect right now
   gameprio list                         every process with its current priority
 
 Run from an elevated console. Every change is journalled to

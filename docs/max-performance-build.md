@@ -209,6 +209,46 @@ process and released when `gameprio` exits.
 
 ---
 
+## Knowing whether it worked
+
+Two separate questions, and they need different answers.
+
+### 1. Did the changes actually land?
+
+`gameprio verify` (or the **Verify** button, results in the Activity tab). It reads the
+state back out of Windows and deliberately ignores our own journal - the journal is what
+we intended, verify is what actually happened:
+
+```
+VERIFY - read back from Windows, not from our own journal
+
+  power plan               Ultimate Performance
+  min processor state      100%
+  timer resolution         0.5 ms (finest available 0.5 ms)
+  MMCSS responsiveness     0
+  MMCSS Games GPU prio     8
+  Game DVR                 disabled
+  QoS policies             GamePrio-game-Fortnite..., GamePrio-cap-steam
+  metric: Ethernet         1
+  game process             FortniteClient-Win64-Shipping: Normal - safe mode, we never opened it
+  background priority      38 of 51 at Idle
+  background EcoQoS        34 of 51 in efficiency mode
+    still at their own priority: SteamService, nvcontainer, ...
+```
+
+Green lines are what the profile asked for; amber lines are not. In safe mode the game
+line reading **Normal / untouched** is the pass condition, not a failure - it is the
+evidence that the game process was never opened.
+
+Cross-check it independently in **Task Manager -> Details**, right-click the column
+headers, add **Base priority** and **Efficiency**: your background apps should read
+`Low` with a green leaf. That is Windows telling you, with gameprio not involved.
+
+### 2. Did it make any difference?
+
+That is what the benchmark is for, and the answer is frequently "no measurable change" -
+which is worth knowing before you build a habit around it.
+
 ## Testing it properly
 
 This is the part that makes the tool worth having.

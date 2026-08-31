@@ -85,6 +85,12 @@ internal static class Native
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetProcessAffinityMask(IntPtr handle, out UIntPtr processMask, out UIntPtr systemMask);
 
+    /// <summary>Reads back what SetProcessInformation did - used by verify, not by apply.</summary>
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetProcessInformation(
+        IntPtr handle, int informationClass, ref PROCESS_POWER_THROTTLING_STATE info, uint size);
+
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetProcessInformation(
