@@ -22,13 +22,16 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        // Double-clicked from Explorer? Nothing else owns this console, so there is no
+        // command line to read and the window would vanish the instant we returned.
+        bool fromExplorer = LaunchedFromExplorer();
+        if (fromExplorer && args.Length == 0) return Menu();
+
         int exitCode;
         try { exitCode = Run(args); }
         catch (Exception ex) { Log.Error(ex.ToString()); exitCode = 1; }
 
-        // Double-clicked from Explorer? Nothing else owns this console, so it would
-        // vanish the instant we return and you would never see a word of the output.
-        if (LaunchedFromExplorer())
+        if (fromExplorer)
         {
             Console.WriteLine();
             Console.Write("Press any key to close . . . ");
@@ -36,6 +39,52 @@ internal static class Program
         }
 
         return exitCode;
+    }
+
+    /// <summary>What you get when you double-click the exe: pick a command, keep the window.</summary>
+    private static int Menu()
+    {
+        while (true)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"  gameprio {Version}   elevated: {IsElevated()}   profile: {FindProfilePath() ?? "NOT FOUND"}");
+            Console.WriteLine();
+            Console.WriteLine("   1   doctor    what this machine looks like, and what is armed");
+            Console.WriteLine("   2   watch     wait for the game, apply on launch, restore on exit");
+            Console.WriteLine("   3   bench     interleaved A/B capture, with a confidence interval");
+            Console.WriteLine("   4   apply     apply now to an already-running game");
+            Console.WriteLine("   5   restore   undo everything from the journal");
+            Console.WriteLine("   6   list      every process with its current priority");
+            Console.WriteLine("   q   quit");
+            Console.WriteLine();
+            Console.Write("  > ");
+
+            string choice = (Console.ReadLine() ?? "q").Trim().ToLowerInvariant();
+            Console.WriteLine();
+
+            string[] next = choice switch
+            {
+                "1" or "doctor" => new[] { "doctor" },
+                "2" or "watch" => new[] { "watch" },
+                "3" or "bench" => new[] { "bench" },
+                "4" or "apply" => new[] { "apply" },
+                "5" or "restore" => new[] { "restore" },
+                "6" or "list" => new[] { "list" },
+                "q" or "quit" or "exit" or "" => null,
+                _ => Array.Empty<string>()
+            };
+
+            if (next == null) return 0;
+            if (next.Length == 0) { Log.Warn("  pick a number from the list, or q to quit"); continue; }
+
+            try { Run(next); }
+            catch (Exception ex) { Log.Error(ex.ToString()); }
+
+            Console.WriteLine();
+            Console.Write("Press any key to return to the menu . . . ");
+            try { Console.ReadKey(true); } catch { Thread.Sleep(10_000); }
+            Console.WriteLine();
+        }
     }
 
     private static int Run(string[] args)
@@ -257,15 +306,32 @@ internal static class Program
 
     private static Profile LoadProfile(string[] args)
     {
-        string path = ArgString("--profile", null)
-                      ?? (File.Exists("profile.json") ? "profile.json" : "profile.example.json");
+        string path = ArgString("--profile", null) ?? FindProfilePath();
 
-        if (!File.Exists(path))
-            throw new FileNotFoundException($"profile not found: {path} (pass --profile <file>)");
+        if (path == null || !File.Exists(path))
+            throw new FileNotFoundException(
+                "no profile found. Put profile.json next to gameprio.exe " +
+                $"(looked in {Directory.GetCurrentDirectory()} and {AppContext.BaseDirectory}), " +
+                "or pass --profile <file>.");
 
         var profile = Profile.Load(path);
         Log.Dim($"profile: {path} ({profile.Name})");
         return profile;
+    }
+
+    /// <summary>Working directory first, then the exe's own folder - double-clicking sets neither reliably.</summary>
+    private static string FindProfilePath()
+    {
+        foreach (var dir in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            if (string.IsNullOrEmpty(dir)) continue;
+            foreach (var name in new[] { "profile.json", "profile.example.json" })
+            {
+                string candidate = Path.Combine(dir, name);
+                if (File.Exists(candidate)) return candidate;
+            }
+        }
+        return null;
     }
 
     private static Profile LoadProfileOrDefault(string[] args)
