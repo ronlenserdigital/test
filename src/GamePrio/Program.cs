@@ -22,13 +22,36 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        int exitCode;
+        try { exitCode = Run(args); }
+        catch (Exception ex) { Log.Error(ex.ToString()); exitCode = 1; }
+
+        // Double-clicked from Explorer? Nothing else owns this console, so it would
+        // vanish the instant we return and you would never see a word of the output.
+        if (LaunchedFromExplorer())
+        {
+            Console.WriteLine();
+            Console.Write("Press any key to close . . . ");
+            try { Console.ReadKey(true); } catch { Thread.Sleep(20_000); }
+        }
+
+        return exitCode;
+    }
+
+    private static int Run(string[] args)
+    {
+        try { Console.OutputEncoding = System.Text.Encoding.UTF8; } catch { }
         _args = args;
         string command = args.Length > 0 ? args[0].ToLowerInvariant() : "help";
 
-        if (!IsElevated() && command is not ("help" or "list"))
+        Log.Dim($"gameprio {Version}  |  command: {command}  |  elevated: {IsElevated()}  |  " +
+                $"{Environment.OSVersion.VersionString}");
+
+        if (!IsElevated() && command is not ("help" or "list" or "version"))
         {
-            Log.Error("gameprio needs an elevated console - it changes other processes, the power plan and HKLM.");
+            Log.Error("gameprio needs an elevated console.");
+            Log.Info("  Right-click Windows Terminal or cmd -> 'Run as administrator', then run it from there.");
+            Log.Info("  (Double-clicking the exe also works - accept the UAC prompt.)");
             return 2;
         }
 
@@ -44,11 +67,24 @@ internal static class Program
                 case "restore": return RestoreOnly();
                 case "bench": return RunBench(LoadProfile(args));
                 case "list": return ListProcesses();
+                case "version": Console.WriteLine(Version); return 0;
                 default: PrintHelp(); return 0;
             }
         }
         catch (FileNotFoundException ex) { Log.Error(ex.Message); return 3; }
         catch (Exception ex) { Log.Error(ex.ToString()); return 1; }
+    }
+
+    private const string Version = "0.1.0";
+
+    private static bool LaunchedFromExplorer()
+    {
+        try
+        {
+            var buffer = new uint[4];
+            return Native.GetConsoleProcessList(buffer, (uint)buffer.Length) <= 1;
+        }
+        catch { return false; }
     }
 
     // ------------------------------------------------------------ commands

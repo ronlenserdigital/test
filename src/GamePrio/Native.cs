@@ -115,6 +115,10 @@ internal static class Native
     [DllImport("ntdll.dll")]
     public static extern int NtSetTimerResolution(uint desired, bool setResolution, out uint actual);
 
+    /// <summary>How many processes share this console. 1 == launched by double-click.</summary>
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern uint GetConsoleProcessList(uint[] processList, uint count);
+
     // ---- token privileges ----
     private const uint TOKEN_ADJUST_PRIVILEGES = 0x0020;
     private const uint TOKEN_QUERY = 0x0008;
