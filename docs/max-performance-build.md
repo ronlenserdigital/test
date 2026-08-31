@@ -309,9 +309,24 @@ separate always-on-top window fed by PresentMon's ETW stream - nothing injected,
 on the game. The trade-off is honest: it draws over borderless and windowed games, and not
 over exclusive fullscreen. Almost every modern title defaults to borderless.
 
-Frame data needs PresentMon. STRYKR looks for it beside the executable, in the working
-directory, on PATH and under Program Files; if it is genuinely missing the overlay says so
-in plain words and still shows CPU and RAM, rather than printing a stack trace.
+### PresentMon is bundled
+
+Frame timing is the one number this cannot synthesise, and sending a user off to find a
+second executable is a bad first run, so **PresentMon ships inside STRYKR**.
+
+- Intel PresentMon **2.4.0**, x64 console build, Authenticode-signed
+- Taken from the official GitHub release over TLS
+- SHA-256 `efe55aa91d381f425e686c87696965dd6b148e130e34985ef03733980a7480c4`
+- MIT licensed (Copyright Intel Corporation); the licence is embedded and written out
+  beside the tool
+- Vendored at `src/GamePrio/tools/` and embedded as a resource, so the build is
+  reproducible without network access
+
+On first use it is unpacked to `%LOCALAPPDATA%\STRYKR\tools\PresentMon.exe` and only
+rewritten if it is missing or the wrong size. **A copy you already have wins**: an explicit
+path in the profile, one next to the executable, one in the working directory, or an Intel
+install under Program Files is used in preference to the bundled build, so you can point
+STRYKR at a newer PresentMon without touching the code.
 
 ## Knowing whether it worked
 

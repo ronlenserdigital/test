@@ -23,6 +23,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      PresentMon (Intel, MIT) is vendored and embedded so frame timing works out of the
+      box. It is extracted next to the user's data on first use, with its licence beside
+      it. Sourced from the official GitHub release; see docs for the SHA-256.
+    -->
+    <EmbeddedResource Include="tools\PresentMon.exe" LogicalName="GamePrio.Tools.PresentMon.exe" />
+    <EmbeddedResource Include="tools\PresentMon-LICENSE.txt" LogicalName="GamePrio.Tools.PresentMon-LICENSE.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="strykr" />
     <InternalsVisibleTo Include="gameprio.tests" />
   </ItemGroup>

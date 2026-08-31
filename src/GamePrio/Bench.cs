@@ -93,8 +93,9 @@ internal static class Bench
             .Replace("{out}", $"\"{csv}\"")
             .Replace("{seconds}", seconds.ToString());
 
-        Log.Dim($"  {profile.Bench.PresentMonPath} {args}");
-        var result = Tuners.Run(profile.Bench.PresentMonPath, args);
+        string presentMon = PresentMonTool.EnsureAvailable(profile.Bench.PresentMonPath);
+        Log.Dim($"  {presentMon} {args}");
+        var result = Tuners.Run(presentMon, args);
 
         if (!File.Exists(csv))
         {

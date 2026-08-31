@@ -23,4 +23,10 @@
     <Compile Include="TestMain.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Mirror the real build so the bundled-tool checks mean something. -->
+    <EmbeddedResource Include="../GamePrio/tools/PresentMon.exe" LogicalName="GamePrio.Tools.PresentMon.exe" />
+    <EmbeddedResource Include="../GamePrio/tools/PresentMon-LICENSE.txt" LogicalName="GamePrio.Tools.PresentMon-LICENSE.txt" />
+  </ItemGroup>
+
 </Project>

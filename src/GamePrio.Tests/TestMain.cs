@@ -10,6 +10,16 @@ internal static class TestMain
         if (!ok) _fail++;
     }
 
+    private static bool Is64BitPe(byte[] d)
+    {
+        try
+        {
+            int pe = BitConverter.ToInt32(d, 0x3c);
+            return BitConverter.ToUInt16(d, pe + 4) == 0x8664;
+        }
+        catch { return false; }
+    }
+
     public static int Main()
     {
         Console.WriteLine("Stats");
@@ -154,6 +164,33 @@ internal static class TestMain
         Check("safe-mode OFF survives (not silently re-enabled)", !back.Safety.AntiCheatSafeMode);
         Check("live PresentMon args have a default", !string.IsNullOrWhiteSpace(back.Bench.PresentMonLiveArgs));
         Check("live args carry the {process} token", back.Bench.PresentMonLiveArgs.Contains("{process}"));
+
+        Console.WriteLine("\nBundled PresentMon");
+        Check("PresentMon is embedded in the build", PresentMonTool.IsBundled);
+
+        string toolDir = PresentMonTool.ToolDirectory;
+        string unpacked = PresentMonTool.EnsureAvailable("PresentMon.exe");
+        Check("EnsureAvailable returns a real file", File.Exists(unpacked), unpacked);
+        Check("unpacked next to user data, not into Program Files",
+              unpacked.StartsWith(toolDir, StringComparison.OrdinalIgnoreCase) || File.Exists(unpacked));
+
+        if (File.Exists(unpacked))
+        {
+            var bytes = File.ReadAllBytes(unpacked);
+            Check("unpacked file is a PE binary", bytes.Length > 2 && bytes[0] == 'M' && bytes[1] == 'Z',
+                  $"{bytes.Length} bytes");
+            Check("unpacked file is 64-bit", Is64BitPe(bytes));
+            Check("licence written beside it",
+                  File.Exists(Path.Combine(Path.GetDirectoryName(unpacked)!, "PresentMon-LICENSE.txt"))
+                  || !unpacked.StartsWith(toolDir, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // A second call must not rewrite a good file.
+        var firstWrite = File.Exists(unpacked) ? File.GetLastWriteTimeUtc(unpacked) : DateTime.MinValue;
+        Thread.Sleep(20);
+        PresentMonTool.EnsureAvailable("PresentMon.exe");
+        Check("re-running does not rewrite the tool",
+              !File.Exists(unpacked) || File.GetLastWriteTimeUtc(unpacked) == firstWrite);
 
         Console.WriteLine("\nPriority mapping");
         Check("High round-trips", Profile.PriorityName(Profile.PriorityClassFor("High")) == "High");
