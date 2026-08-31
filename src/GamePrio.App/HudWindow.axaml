@@ -1,47 +1,53 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="GamePrio.App.HudWindow"
-        Title="gameprio HUD"
-        Width="212" Height="150"
+        Title="STRYKR HUD"
+        Width="224" Height="158"
         SystemDecorations="None"
         Topmost="True"
         ShowInTaskbar="False"
         CanResize="False"
-        TransparencyLevelHint="AcrylicBlur"
-        Background="#D9101318">
+        Background="Transparent">
 
-  <Border BorderBrush="#2A313D" BorderThickness="1" CornerRadius="5" Padding="10,8">
-    <StackPanel Spacing="2">
+  <Border Background="#E60A0A0C" BorderBrush="#3A1218" BorderThickness="1" CornerRadius="9"
+          Padding="14,11" BoxShadow="0 0 26 0 #4DE01F2D">
+    <StackPanel Spacing="3">
 
       <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0" Text="gameprio" FontSize="9" FontWeight="Bold"
-                   Foreground="#6B7383" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Text="drag  ·  X" x:Name="CloseHint" FontSize="9"
-                   Foreground="#6B7383" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="0" Text="STRYKR"
+                   FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
+                   FontSize="10" FontWeight="Bold" Foreground="#E01F2D" LetterSpacing="1.4"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="drag  ·  ✕" FontSize="9" Foreground="#5A5B64"
+                   VerticalAlignment="Center" />
       </Grid>
 
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <TextBlock x:Name="FpsText" Text="--" FontSize="34" FontWeight="Bold"
-                   Foreground="#E7EAF0" FontFamily="Consolas, monospace" />
-        <TextBlock Text="FPS" FontSize="10" Foreground="#868F9F" VerticalAlignment="Bottom" Margin="0,0,0,8" />
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock x:Name="FpsText" Text="--" FontSize="38" FontWeight="Bold"
+                   Foreground="#FFFFFF"
+                   FontFamily="Bahnschrift, Consolas, monospace" />
+        <TextBlock Text="FPS" FontSize="10" Foreground="#E01F2D" FontWeight="Bold"
+                   VerticalAlignment="Bottom" Margin="0,0,0,9" LetterSpacing="1" />
       </StackPanel>
 
-      <Grid ColumnDefinitions="76,*" RowDefinitions="Auto,Auto,Auto,Auto">
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="frame time" FontSize="10" Foreground="#868F9F" />
+      <Border Height="1" Background="#1E1F26" Margin="0,3,0,5" />
+
+      <Grid ColumnDefinitions="84,*" RowDefinitions="Auto,Auto,Auto,Auto">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="frame time" FontSize="10" Foreground="#63646E" />
         <TextBlock Grid.Row="0" Grid.Column="1" x:Name="FrameTimeText" Text="--" FontSize="10"
-                   Foreground="#BCC3D0" FontFamily="Consolas, monospace" />
+                   Foreground="#C9CAD2" FontFamily="Consolas, monospace" />
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="1% low" FontSize="10" Foreground="#868F9F" />
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="1% low" FontSize="10" Foreground="#63646E" />
         <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LowText" Text="--" FontSize="10"
-                   Foreground="#E8A057" FontFamily="Consolas, monospace" />
+                   Foreground="#FF4A54" FontWeight="Bold" FontFamily="Consolas, monospace" />
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="stutters/min" FontSize="10" Foreground="#868F9F" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="stutters/min" FontSize="10" Foreground="#63646E" />
         <TextBlock Grid.Row="2" Grid.Column="1" x:Name="StutterText" Text="--" FontSize="10"
-                   Foreground="#BCC3D0" FontFamily="Consolas, monospace" />
+                   Foreground="#C9CAD2" FontFamily="Consolas, monospace" />
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="cpu / ram" FontSize="10" Foreground="#868F9F" />
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="cpu / ram" FontSize="10" Foreground="#63646E" />
         <TextBlock Grid.Row="3" Grid.Column="1" x:Name="SystemText" Text="--" FontSize="10"
-                   Foreground="#BCC3D0" FontFamily="Consolas, monospace" />
+                   Foreground="#C9CAD2" FontFamily="Consolas, monospace" />
       </Grid>
 
       <TextBlock x:Name="NoteText" Text="" FontSize="9" Foreground="#D9B45C" TextWrapping="Wrap" />

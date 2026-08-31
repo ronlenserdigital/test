@@ -9,9 +9,44 @@ It is also fully journalled, so every change can be put back exactly.
 
 ---
 
+## STRYKR
+
+The UI is branded STRYKR and publishes as `strykr.exe`. The engine, the console tool and
+the profile format are unchanged - only the front end was redesigned.
+
+Dark shell, red accent (#E01F2D), Bahnschrift for display type with Inter for body -
+both ship with Windows, so no font has to be downloaded or embedded. The window uses
+extended client area with the system caption buttons, so minimize / maximize / close are
+the real ones and behave normally; the strip beside them drags the window.
+
+Layout: a game library rail on the left (search, filter-to-ticked, the catalog grouped by
+anti-cheat class with per-game colour tiles, selected counts, add-a-game); CONTROL /
+SETTINGS / ACTIVITY tabs on the right; and a footer strip carrying profile, CPU set,
+logical CPUs, timer resolution and power plan, plus **Export report**.
+
+Nothing was dropped in the redesign. Every feature is reachable:
+
+| Feature | Where |
+|---|---|
+| Game selection, search, filter, add custom | Left rail |
+| Anti-cheat banner and safe-mode switch | CONTROL, above STATUS |
+| Watch / stop | CONTROL, hero card |
+| Apply now, Restore everything, View activity | CONTROL card |
+| Verify | STATUS card header |
+| Benchmark, live FPS counter | BENCHMARK card |
+| Simple presets and switches | SETTINGS, Simple |
+| Every knob with its API detail | SETTINGS, Advanced |
+| Save / reload profile | SETTINGS, top right |
+| Log | ACTIVITY |
+| Export report | Footer |
+| Elevation warning | State pill, top right |
+
+`Export report` writes a timestamped file to your Desktop: machine, full profile, and a
+complete verify pass read back out of Windows.
+
 ## Two front ends
 
-`gameprio-ui.exe` is the window: a game library you tick, every setting as a control,
+`strykr.exe` is the window: a game library you tick, every setting as a control,
 live status and the full activity log. `gameprio.exe` is the same engine on the command
 line, useful for scripting and for the menu you get by double-clicking it. They share
 one `profile.json` and one journal, so you can drive it either way.

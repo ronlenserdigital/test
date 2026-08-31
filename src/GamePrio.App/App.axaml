@@ -3,63 +3,229 @@
              x:Class="GamePrio.App.GameprioApp"
              RequestedThemeVariant="Dark">
 
+  <Application.Resources>
+    <!-- Fluent derives checkbox, focus and selection colours from the accent. -->
+    <Color x:Key="SystemAccentColor">#E01F2D</Color>
+    <Color x:Key="SystemAccentColorDark1">#C8161F</Color>
+    <Color x:Key="SystemAccentColorDark2">#A31119</Color>
+    <Color x:Key="SystemAccentColorDark3">#7D0C12</Color>
+    <Color x:Key="SystemAccentColorLight1">#FF3B47</Color>
+    <Color x:Key="SystemAccentColorLight2">#FF6069</Color>
+    <Color x:Key="SystemAccentColorLight3">#FF8A91</Color>
+  </Application.Resources>
+
   <Application.Styles>
     <FluentTheme />
 
     <Style Selector="Window">
-      <Setter Property="Background" Value="#0F1218" />
-      <Setter Property="FontFamily" Value="Inter, Segoe UI, sans-serif" />
+      <Setter Property="Background" Value="#0A0A0C" />
+      <Setter Property="FontFamily" Value="Inter, Segoe UI Variable Text, Segoe UI, sans-serif" />
     </Style>
 
+    <!-- cards -->
     <Style Selector="Border.card">
-      <Setter Property="Background" Value="#161A22" />
-      <Setter Property="BorderBrush" Value="#2A313D" />
+      <Setter Property="Background" Value="#0F1014" />
+      <Setter Property="BorderBrush" Value="#1E1F26" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="24" />
+    </Style>
+
+    <Style Selector="Border.panel">
+      <Setter Property="Background" Value="#0C0D10" />
+      <Setter Property="BorderBrush" Value="#1A1B21" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
       <Setter Property="Padding" Value="16" />
     </Style>
 
-    <Style Selector="TextBlock.h">
+    <!-- type -->
+    <Style Selector="TextBlock.cardhead">
+      <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#E01F2D" />
+      <Setter Property="LetterSpacing" Value="1.6" />
+    </Style>
+
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif" />
       <Setter Property="FontSize" Value="11" />
       <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Foreground" Value="#868F9F" />
-      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="Foreground" Value="#E01F2D" />
+      <Setter Property="LetterSpacing" Value="1.4" />
     </Style>
 
     <Style Selector="TextBlock.label">
-      <Setter Property="Foreground" Value="#868F9F" />
       <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="#7E7F8A" />
     </Style>
 
     <Style Selector="TextBlock.value">
-      <Setter Property="Foreground" Value="#E7EAF0" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="#EDEDF2" />
     </Style>
 
-    <Style Selector="Button.primary">
-      <Setter Property="Background" Value="#E8A057" />
-      <Setter Property="Foreground" Value="#15181F" />
+    <Style Selector="TextBlock.statlabel">
+      <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif" />
+      <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Padding" Value="18,10" />
-      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Foreground" Value="#63646E" />
+      <Setter Property="LetterSpacing" Value="1.2" />
+    </Style>
+
+    <Style Selector="TextBlock.statvalue">
+      <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#E01F2D" />
+    </Style>
+
+    <Style Selector="TextBlock.body">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="Foreground" Value="#93949E" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="LineHeight" Value="19" />
+    </Style>
+
+    <!-- tabs, hand built so the underline is exactly where it should be -->
+    <Style Selector="Button.tab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,3" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="6,10" />
+      <Setter Property="Margin" Value="0,0,34,0" />
+      <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#7E7F8A" />
+    </Style>
+    <Style Selector="Button.tab /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.tab:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TextBlock.Foreground" Value="#C9CAD2" />
+    </Style>
+    <Style Selector="Button.tab.on">
+      <Setter Property="Foreground" Value="#E01F2D" />
+      <Setter Property="BorderBrush" Value="#E01F2D" />
+    </Style>
+    <Style Selector="Button.tab.on /template/ ContentPresenter">
+      <Setter Property="TextBlock.Foreground" Value="#E01F2D" />
+    </Style>
+
+    <!-- buttons -->
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#E01F2D" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="BorderBrush" Value="#FF3B47" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="20,12" />
+      <Setter Property="CornerRadius" Value="7" />
+    </Style>
+    <Style Selector="Button.primary /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E01F2D" />
+      <Setter Property="TextBlock.Foreground" Value="#FFFFFF" />
     </Style>
     <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#F2B577" />
+      <Setter Property="Background" Value="#FF2F3C" />
+      <Setter Property="TextBlock.Foreground" Value="#FFFFFF" />
+    </Style>
+
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="#17090C" />
+      <Setter Property="Foreground" Value="#FF4A54" />
+      <Setter Property="BorderBrush" Value="#E01F2D" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="20,12" />
+      <Setter Property="CornerRadius" Value="7" />
+    </Style>
+    <Style Selector="Button.danger /template/ ContentPresenter">
+      <Setter Property="Background" Value="#17090C" />
+      <Setter Property="TextBlock.Foreground" Value="#FF4A54" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#250D11" />
     </Style>
 
     <Style Selector="Button.ghost">
-      <Setter Property="Background" Value="#1C212B" />
-      <Setter Property="Foreground" Value="#E7EAF0" />
-      <Setter Property="BorderBrush" Value="#2A313D" />
+      <Setter Property="Background" Value="#121318" />
+      <Setter Property="Foreground" Value="#C9CAD2" />
+      <Setter Property="BorderBrush" Value="#26272F" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Padding" Value="14,10" />
-      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="20,12" />
+      <Setter Property="CornerRadius" Value="7" />
+    </Style>
+    <Style Selector="Button.ghost /template/ ContentPresenter">
+      <Setter Property="Background" Value="#121318" />
+      <Setter Property="TextBlock.Foreground" Value="#C9CAD2" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#1A1B22" />
+      <Setter Property="TextBlock.Foreground" Value="#EDEDF2" />
+    </Style>
+
+    <Style Selector="Button.icon">
+      <Setter Property="Background" Value="#121318" />
+      <Setter Property="BorderBrush" Value="#26272F" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="9" />
+    </Style>
+    <Style Selector="Button.icon /template/ ContentPresenter">
+      <Setter Property="Background" Value="#121318" />
+    </Style>
+    <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#1A1B22" />
+    </Style>
+
+    <!-- inputs -->
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="#0C0D11" />
+      <Setter Property="Foreground" Value="#EDEDF2" />
+      <Setter Property="BorderBrush" Value="#22232B" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="11,9" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="CaretBrush" Value="#E01F2D" />
+    </Style>
+    <Style Selector="TextBox /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="#0C0D11" />
+      <Setter Property="BorderBrush" Value="#22232B" />
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="#E01F2D" />
+    </Style>
+
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="#0C0D11" />
+      <Setter Property="Foreground" Value="#EDEDF2" />
+      <Setter Property="BorderBrush" Value="#22232B" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="FontSize" Value="13" />
     </Style>
 
     <Style Selector="CheckBox">
-      <Setter Property="Foreground" Value="#E7EAF0" />
+      <Setter Property="Foreground" Value="#C9CAD2" />
       <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <!-- slim scrollbars, so the list looks like the concept -->
+    <Style Selector="ScrollBar:vertical">
+      <Setter Property="Width" Value="6" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ScrollBar:vertical /template/ Thumb">
+      <Setter Property="Background" Value="#2C2D36" />
+      <Setter Property="CornerRadius" Value="3" />
     </Style>
   </Application.Styles>
 </Application>

@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="gameprio-ui" />
+    <InternalsVisibleTo Include="strykr" />
     <InternalsVisibleTo Include="gameprio.tests" />
   </ItemGroup>
 
