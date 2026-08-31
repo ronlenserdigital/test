@@ -131,6 +131,30 @@ internal static class TestMain
               GameCatalog.All.SelectMany(g => g.Executables).Select(e => e.ToLowerInvariant()).Distinct().Count()
               == GameCatalog.All.Sum(g => g.Executables.Length));
 
+        Console.WriteLine("\nProfile round-trip (the UI writes these)");
+        string rt = Path.Combine(dir, "roundtrip.json");
+        var original = new Profile { Name = "rt" };
+        original.Game.Executables = new List<string> { "FortniteClient-Win64-Shipping" };
+        original.Game.Priority = "High";
+        original.Background.Suspend = true;
+        original.Background.CpuCapPercent = 42;
+        original.System.TimerResolutionMs = 0.5;
+        original.Network.Dscp = 46;
+        original.Network.BulkUploaderThrottleKbps = 1000;
+        original.Safety.AntiCheatSafeMode = false;
+        original.Save(rt);
+        var back = Profile.Load(rt);
+        Check("executables survive save/load", back.Game.Executables.Contains("fortniteclient-win64-shipping"));
+        Check("priority survives", back.Game.Priority == "High");
+        Check("suspend survives", back.Background.Suspend);
+        Check("cpu cap survives", back.Background.CpuCapPercent == 42);
+        Check("timer resolution survives", Math.Abs(back.System.TimerResolutionMs - 0.5) < 1e-9);
+        Check("dscp survives", back.Network.Dscp == 46);
+        Check("uploader throttle survives", back.Network.BulkUploaderThrottleKbps == 1000);
+        Check("safe-mode OFF survives (not silently re-enabled)", !back.Safety.AntiCheatSafeMode);
+        Check("live PresentMon args have a default", !string.IsNullOrWhiteSpace(back.Bench.PresentMonLiveArgs));
+        Check("live args carry the {process} token", back.Bench.PresentMonLiveArgs.Contains("{process}"));
+
         Console.WriteLine("\nPriority mapping");
         Check("High round-trips", Profile.PriorityName(Profile.PriorityClassFor("High")) == "High");
         Check("Idle round-trips", Profile.PriorityName(Profile.PriorityClassFor("idle")) == "Idle");

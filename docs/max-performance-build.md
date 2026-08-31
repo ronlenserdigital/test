@@ -209,6 +209,47 @@ process and released when `gameprio` exits.
 
 ---
 
+## Simple mode and Advanced mode
+
+The header carries an **Advanced** switch. The two panels drive the same profile and are
+kept in sync, so nothing is hidden - only described differently.
+
+**Simple** offers three presets (Light touch / Balanced / Maximum) and six plain-language
+switches: quiet down background apps, keep the PC at full speed, turn off background
+recording, put the game first on your internet, freeze apps you are not using, stay safe
+in anti-cheat games. Each carries one line explaining what actually happens. It also
+carries a panel saying what the tool will not do, because that is part of an honest UI.
+
+**Advanced** replaces every label with the mechanism: `SetPriorityClass`,
+`SetProcessAffinityMask` against the max-`EfficiencyClass` mask from
+`GetLogicalProcessorInformationEx`, `PROCESS_POWER_THROTTLING_EXECUTION_SPEED` control
+and state masks, `JOBOBJECT_CPU_RATE_CONTROL_INFORMATION` in hundredths of a percent,
+the power scheme GUID, `NtSetTimerResolution` and its per-process behaviour since 22H2,
+the MMCSS registry values, `New-NetQosPolicy` and why DSCP has to be a policy rather
+than set by the application - plus the three safety tiers and what is in each.
+
+One implementation note that matters: `ApplyControlsToProfile` dispatches on the active
+panel. The hidden panel holds stale values, and reading it would silently undo the other.
+
+## The live FPS counter
+
+The **Live FPS counter** button opens a small always-on-top window showing FPS, frame
+time, 1% low over a rolling minute, stutter count, and CPU/RAM. Drag it anywhere; click
+the X in its top-right corner to close.
+
+It is **not an in-game overlay**. A real overlay means injecting into the game process,
+which is exactly what safe mode exists to avoid and what anti-cheat hunts for. This is a
+separate window fed by PresentMon's ETW stream - nothing is injected, and no handle is
+opened on the game. The trade-off is honest: it shows over borderless and windowed
+games, and it will not show over exclusive fullscreen. Almost every modern title
+defaults to borderless.
+
+Frame data needs PresentMon on PATH. Without it the counter still shows CPU and RAM and
+says plainly that it has no frame data, rather than inventing numbers.
+
+Watch the **1% low** line rather than the big FPS number. That is where background
+contention shows up.
+
 ## Knowing whether it worked
 
 Two separate questions, and they need different answers.

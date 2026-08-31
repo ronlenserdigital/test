@@ -16,6 +16,8 @@ public partial class MainWindow : Window
     private Engine _engine;
     private string _profilePath;
     private bool _loading;
+    private LiveMonitor _monitor;
+    private HudWindow _hud;
 
     public MainWindow()
     {
@@ -187,7 +189,9 @@ public partial class MainWindow : Window
             }
         }
 
-        ApplyControlsToProfile();
+        // Only the executable list belongs to the game panel; the rest of the profile is
+        // owned by whichever settings panel is active, and is read on demand.
+        _engine.Profile.Game.Executables = SelectedExecutables();
     }
 
     // ------------------------------------------------------------- profile
@@ -221,40 +225,62 @@ public partial class MainWindow : Window
             foreach (var exe in p.Game.Executables)
                 if (GameCatalog.FindByExecutable(exe) == null) AddCustomRow(exe, true);
 
-            SetCombo("GamePriority", p.Game.Priority);
-            SetCheck("GamePCore", p.Game.PCoreOnly);
-            SetCheck("GameNoThrottle", p.Game.DisablePowerThrottling);
-            SetCheck("GameIgnoreTimer", p.Game.IgnoreTimerResolution);
-
-            SetCombo("BackgroundPriority", p.Background.Priority);
-            SetCheck("BgEco", p.Background.EcoQoS);
-            SetCheck("BgECore", p.Background.ECoreOnly);
-            SetCheck("BgSuspend", p.Background.Suspend);
-            SetText("BgCpuCap", p.Background.CpuCapPercent.ToString());
-
-            SetCheck("SysPower", p.System.UltimatePerformancePowerPlan);
-            SetCheck("SysParking", p.System.DisableCoreParking);
-            SetCheck("SysTimer", p.System.TimerResolutionMs > 0);
-            SetCheck("SysMmcss", p.System.MmcssGamesTuning);
-            SetCheck("SysGameDvr", p.System.DisableGameDvr);
-
-            SetText("NetAdapter", p.Network.PreferredInterfaceAlias ?? "");
-            SetText("NetDscp", p.Network.Dscp.ToString());
-            SetCheck("NetThrottle", p.Network.ThrottleBulkUploaders);
-            SetCheck("SafeMode", p.Safety.AntiCheatSafeMode);
+            RefreshAdvancedFromProfileCore(p);
 
             var path = this.FindControl<TextBlock>("ProfilePathText");
             if (path != null) path.Text = _profilePath;
         }
         finally { _loading = false; }
 
+        RefreshSimpleFromProfile();
         RefreshSelection();
     }
 
-    /// <summary>Pushes every control back into the live profile the engine uses.</summary>
+    private void RefreshAdvancedFromProfile()
+    {
+        _loading = true;
+        try { RefreshAdvancedFromProfileCore(_engine.Profile); }
+        finally { _loading = false; }
+    }
+
+    private void RefreshAdvancedFromProfileCore(Profile p)
+    {
+        SetCombo("GamePriority", p.Game.Priority);
+        SetCheck("GamePCore", p.Game.PCoreOnly);
+        SetCheck("GameNoThrottle", p.Game.DisablePowerThrottling);
+        SetCheck("GameIgnoreTimer", p.Game.IgnoreTimerResolution);
+
+        SetCombo("BackgroundPriority", p.Background.Priority);
+        SetCheck("BgEco", p.Background.EcoQoS);
+        SetCheck("BgECore", p.Background.ECoreOnly);
+        SetCheck("BgSuspend", p.Background.Suspend);
+        SetText("BgCpuCap", p.Background.CpuCapPercent.ToString());
+
+        SetCheck("SysPower", p.System.UltimatePerformancePowerPlan);
+        SetCheck("SysParking", p.System.DisableCoreParking);
+        SetCheck("SysTimer", p.System.TimerResolutionMs > 0);
+        SetCheck("SysMmcss", p.System.MmcssGamesTuning);
+        SetCheck("SysGameDvr", p.System.DisableGameDvr);
+
+        SetText("NetAdapter", p.Network.PreferredInterfaceAlias ?? "");
+        SetText("NetDscp", p.Network.Dscp.ToString());
+        SetCheck("NetThrottle", p.Network.ThrottleBulkUploaders);
+        SetCheck("SafeMode", p.Safety.AntiCheatSafeMode);
+    }
+
+    /// <summary>
+    /// Pushes the ACTIVE panel back into the live profile. Dispatching matters: the
+    /// hidden panel holds stale values, and reading it would silently undo the other one.
+    /// </summary>
     private void ApplyControlsToProfile()
     {
         if (_loading) return;
+        if (Check("AdvancedToggle")) ApplyAdvancedToProfile();
+        else ApplySimpleToProfile();
+    }
+
+    private void ApplyAdvancedToProfile()
+    {
         var p = _engine.Profile;
 
         p.Game.Executables = SelectedExecutables();
@@ -310,6 +336,138 @@ public partial class MainWindow : Window
         RefreshSelection();
         if (!Check("SafeMode"))
             Log.Warn("safe mode OFF - kernel-anti-cheat titles will get the full profile, game process included");
+    }
+
+    // ------------------------------------------------------- simple / advanced
+
+    private void OnModeToggled(object sender, RoutedEventArgs e)
+    {
+        bool advanced = Check("AdvancedToggle");
+
+        var simple = this.FindControl<StackPanel>("SimplePanel");
+        var deep = this.FindControl<StackPanel>("AdvancedPanel");
+        if (simple != null) simple.IsVisible = !advanced;
+        if (deep != null) deep.IsVisible = advanced;
+
+        // Whichever panel is about to be shown gets refreshed from the live profile,
+        // so the two views can never disagree about what is armed.
+        if (advanced) RefreshAdvancedFromProfile();
+        else RefreshSimpleFromProfile();
+    }
+
+    private void OnSimpleChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        ApplySimpleToProfile();
+    }
+
+    private void OnPresetLight(object sender, RoutedEventArgs e) => ApplyPreset(quiet: true, fullSpeed: false, noRecording: true, network: false, freeze: false);
+    private void OnPresetBalanced(object sender, RoutedEventArgs e) => ApplyPreset(quiet: true, fullSpeed: true, noRecording: true, network: true, freeze: false);
+    private void OnPresetMax(object sender, RoutedEventArgs e) => ApplyPreset(quiet: true, fullSpeed: true, noRecording: true, network: true, freeze: true);
+
+    private void ApplyPreset(bool quiet, bool fullSpeed, bool noRecording, bool network, bool freeze)
+    {
+        _loading = true;
+        try
+        {
+            SetCheck("SimpleQuiet", quiet);
+            SetCheck("SimpleFullSpeed", fullSpeed);
+            SetCheck("SimpleNoRecording", noRecording);
+            SetCheck("SimpleNetwork", network);
+            SetCheck("SimpleFreeze", freeze);
+        }
+        finally { _loading = false; }
+
+        ApplySimpleToProfile();
+        Log.Info($"preset applied: background {(quiet ? "quieted" : "untouched")}, " +
+                 $"power {(fullSpeed ? "full speed" : "default")}, " +
+                 $"network {(network ? "prioritised" : "untouched")}, " +
+                 $"freezing {(freeze ? "on" : "off")}");
+    }
+
+    /// <summary>The plain-language toggles each stand for a group of real settings.</summary>
+    private void ApplySimpleToProfile()
+    {
+        var p = _engine.Profile;
+
+        p.Game.Executables = SelectedExecutables();
+        p.Game.Priority = "High";
+        p.Game.PCoreOnly = true;
+        p.Game.DisablePowerThrottling = true;
+        p.Game.IgnoreTimerResolution = true;
+
+        bool quiet = Check("SimpleQuiet");
+        p.Background.Priority = quiet ? "Idle" : "Normal";
+        p.Background.EcoQoS = quiet;
+        p.Background.ECoreOnly = quiet;
+        p.Background.Suspend = Check("SimpleFreeze");
+        p.Background.CpuCapPercent = 0;
+
+        bool fullSpeed = Check("SimpleFullSpeed");
+        p.System.UltimatePerformancePowerPlan = fullSpeed;
+        p.System.DisableCoreParking = fullSpeed;
+        p.System.MinProcessorStatePercent = fullSpeed ? 100 : 0;
+        p.System.TimerResolutionMs = fullSpeed ? 0.5 : 0;
+
+        bool noRecording = Check("SimpleNoRecording");
+        p.System.DisableGameDvr = noRecording;
+        p.System.MmcssGamesTuning = noRecording;
+
+        bool network = Check("SimpleNetwork");
+        p.Network.Dscp = network ? 46 : 0;
+        p.Network.ThrottleBulkUploaders = network;
+
+        p.Safety.AntiCheatSafeMode = Check("SimpleSafe");
+
+        SetCheck("SafeMode", p.Safety.AntiCheatSafeMode);
+        RefreshSelection();
+    }
+
+    /// <summary>Derives the plain-language toggles back from whatever the profile now says.</summary>
+    private void RefreshSimpleFromProfile()
+    {
+        var p = _engine.Profile;
+        _loading = true;
+        try
+        {
+            SetCheck("SimpleQuiet", !string.Equals(p.Background.Priority, "Normal", StringComparison.OrdinalIgnoreCase)
+                                    || p.Background.EcoQoS);
+            SetCheck("SimpleFullSpeed", p.System.UltimatePerformancePowerPlan || p.System.TimerResolutionMs > 0);
+            SetCheck("SimpleNoRecording", p.System.DisableGameDvr);
+            SetCheck("SimpleNetwork", p.Network.Dscp > 0 || p.Network.ThrottleBulkUploaders);
+            SetCheck("SimpleFreeze", p.Background.Suspend);
+            SetCheck("SimpleSafe", p.Safety.AntiCheatSafeMode);
+        }
+        finally { _loading = false; }
+    }
+
+    // ------------------------------------------------------------- live HUD
+
+    private void OnHudClick(object sender, RoutedEventArgs e)
+    {
+        if (_hud != null) { _hud.Close(); _hud = null; _monitor?.Stop(); UpdateHudButton(); return; }
+
+        ApplyControlsToProfile();
+        string target = _engine.Profile.Game.Executables.FirstOrDefault();
+        if (target == null) { Log.Error("tick a game first - the counter follows the selected game"); return; }
+
+        _monitor ??= new LiveMonitor();
+        _monitor.Start(_engine.Profile, target);
+
+        _hud = new HudWindow(_monitor);
+        _hud.Closed += (_, _) => { _hud = null; _monitor?.Stop(); UpdateHudButton(); };
+        _hud.Show();
+
+        Log.Info($"live counter following {target}.exe - drag it anywhere, click its top-right X to close");
+        Log.Dim("  it is a separate always-on-top window, not an in-game overlay: nothing is injected");
+        Log.Dim("  into the game. It shows over borderless and windowed games, not exclusive fullscreen.");
+        UpdateHudButton();
+    }
+
+    private void UpdateHudButton()
+    {
+        var button = this.FindControl<Button>("HudButton");
+        if (button != null) button.Content = _hud != null ? "Hide FPS counter" : "Live FPS counter";
     }
 
     private void OnSuspendToggled(object sender, RoutedEventArgs e)
@@ -384,6 +542,8 @@ public partial class MainWindow : Window
     private void OnClosing(object sender, WindowClosingEventArgs e)
     {
         // Never leave the machine in a governed state because a window was closed.
+        try { _hud?.Close(); } catch { }
+        try { _monitor?.Dispose(); } catch { }
         try { _engine.Dispose(); } catch { }
     }
 

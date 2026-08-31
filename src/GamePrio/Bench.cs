@@ -187,7 +187,7 @@ internal static class Bench
     }
 }
 
-internal static class Stats
+public static class Stats
 {
     public static double Mean(double[] xs) => xs.Length == 0 ? 0 : xs.Sum() / xs.Length;
 

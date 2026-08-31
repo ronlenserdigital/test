@@ -23,6 +23,8 @@
           <Border x:Name="ElevationPill" Background="#16291F" CornerRadius="3" Padding="9,4">
             <TextBlock x:Name="ElevationText" Text="ELEVATED" FontSize="10" FontWeight="Bold" Foreground="#62C295" />
           </Border>
+          <CheckBox x:Name="AdvancedToggle" Content="Advanced" FontSize="11" Click="OnModeToggled"
+                    VerticalAlignment="Center" />
           <Border x:Name="StatePill" Background="#1C212B" CornerRadius="3" Padding="9,4">
             <TextBlock x:Name="StateText" Text="IDLE" FontSize="10" FontWeight="Bold" Foreground="#868F9F" />
           </Border>
@@ -119,6 +121,7 @@
                     <TextBlock Classes="label" Text="Passes" VerticalAlignment="Center" />
                     <TextBox x:Name="BenchRuns" Text="2" Width="60" />
                     <Button x:Name="BenchButton" Classes="ghost" Content="Run benchmark" Click="OnBenchClick" />
+                    <Button x:Name="HudButton" Classes="primary" Content="Live FPS counter" Click="OnHudClick" />
                   </StackPanel>
                   <TextBlock x:Name="BenchNote" TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
                              Text="Needs Intel PresentMon on PATH. Park the game somewhere repeatable first." />
@@ -131,86 +134,208 @@
 
         <TabItem Header="Settings">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="12" Margin="0,12,0,0">
+            <Grid Margin="0,12,0,0">
 
-              <Border Classes="card">
-                <StackPanel Spacing="10">
-                  <TextBlock Classes="h" Text="THE GAME" />
-                  <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="130" />
-                    <ComboBox x:Name="GamePriority" Width="180" SelectedIndex="4">
-                      <ComboBoxItem>Idle</ComboBoxItem>
-                      <ComboBoxItem>BelowNormal</ComboBoxItem>
-                      <ComboBoxItem>Normal</ComboBoxItem>
-                      <ComboBoxItem>AboveNormal</ComboBoxItem>
-                      <ComboBoxItem>High</ComboBoxItem>
-                      <ComboBoxItem>RealTime</ComboBoxItem>
-                    </ComboBox>
-                    <TextBlock x:Name="RealtimeWarning" FontSize="11" Foreground="#D9B45C" VerticalAlignment="Center"
-                               TextWrapping="Wrap" Width="260" IsVisible="False"
-                               Text="RealTime outranks input and audio. It usually costs frame-time consistency." />
-                  </StackPanel>
-                  <CheckBox x:Name="GamePCore" Content="Pin to P-cores only (hybrid CPUs)" />
-                  <CheckBox x:Name="GameNoThrottle" Content="Force power throttling off" />
-                  <CheckBox x:Name="GameIgnoreTimer" Content="Exempt from Windows 11 timer-resolution throttling" />
-                </StackPanel>
-              </Border>
+              <!-- plain language -->
+              <StackPanel x:Name="SimplePanel" Spacing="12">
 
-              <Border Classes="card">
-                <StackPanel Spacing="10">
-                  <TextBlock Classes="h" Text="EVERYTHING ELSE" />
-                  <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="130" />
-                    <ComboBox x:Name="BackgroundPriority" Width="180" SelectedIndex="0">
-                      <ComboBoxItem>Idle</ComboBoxItem>
-                      <ComboBoxItem>BelowNormal</ComboBoxItem>
-                      <ComboBoxItem>Normal</ComboBoxItem>
-                    </ComboBox>
+                <Border Classes="card">
+                  <StackPanel Spacing="10">
+                    <TextBlock Classes="h" Text="PICK A LEVEL" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Button Classes="ghost" Content="Light touch" Click="OnPresetLight" />
+                      <Button Classes="primary" Content="Balanced" Click="OnPresetBalanced" />
+                      <Button Classes="ghost" Content="Maximum" Click="OnPresetMax" />
+                    </StackPanel>
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
+                               Text="Balanced is the one to start with. Maximum also freezes apps you are not using, which is the most aggressive thing this does." />
                   </StackPanel>
-                  <CheckBox x:Name="BgEco" Content="Efficiency mode (EcoQoS)" />
-                  <CheckBox x:Name="BgECore" Content="Exile to E-cores" />
-                  <CheckBox x:Name="BgSuspend" Content="Suspend the freeze list outright" Click="OnSuspendToggled" />
-                  <TextBlock x:Name="SuspendNote" TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
-                             Text="Freezes browsers, cloud sync, Office, Adobe and chat for the session. Anti-cheat, system and launcher processes are never touched." />
-                  <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Classes="label" Text="Hard CPU cap %" VerticalAlignment="Center" Width="130" />
-                    <TextBox x:Name="BgCpuCap" Text="0" Width="70" />
-                    <TextBlock Classes="label" Text="0 = no cap" VerticalAlignment="Center" />
-                  </StackPanel>
-                </StackPanel>
-              </Border>
+                </Border>
 
-              <Border Classes="card">
-                <StackPanel Spacing="10">
-                  <TextBlock Classes="h" Text="THE MACHINE" />
-                  <CheckBox x:Name="SysPower" Content="Ultimate Performance power plan" />
-                  <CheckBox x:Name="SysParking" Content="Disable core parking, 100% processor floor" />
-                  <CheckBox x:Name="SysTimer" Content="Raise global timer resolution to 0.5 ms" />
-                  <CheckBox x:Name="SysMmcss" Content="MMCSS tuning for the Games task class" />
-                  <CheckBox x:Name="SysGameDvr" Content="Disable Game DVR / background recording" />
-                </StackPanel>
-              </Border>
+                <Border Classes="card">
+                  <StackPanel Spacing="14">
+                    <TextBlock Classes="h" Text="WHAT IT DOES WHILE YOU PLAY" />
 
-              <Border Classes="card">
-                <StackPanel Spacing="10">
-                  <TextBlock Classes="h" Text="NETWORK" />
-                  <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Classes="label" Text="Preferred adapter" VerticalAlignment="Center" Width="130" />
-                    <TextBox x:Name="NetAdapter" Text="Ethernet" Width="180" />
-                    <TextBlock Classes="label" Text="forced to metric 1" VerticalAlignment="Center" />
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Classes="label" Text="DSCP mark" VerticalAlignment="Center" Width="130" />
-                    <TextBox x:Name="NetDscp" Text="46" Width="70" />
-                    <TextBlock Classes="label" Text="0 = off. Helps on your LAN; stripped past the ISP edge." VerticalAlignment="Center" />
-                  </StackPanel>
-                  <CheckBox x:Name="NetThrottle" Content="Cap Steam / Epic / OneDrive / Dropbox uploads during a session" />
-                  <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#868F9F"
-                             Text="This is the networking lever with a reliable effect: your own uploads filling the uplink queue is the most common self-inflicted source of in-game jitter." />
-                </StackPanel>
-              </Border>
+                    <StackPanel Spacing="2">
+                      <CheckBox x:Name="SimpleQuiet" Content="Quiet down background apps" Click="OnSimpleChanged" />
+                      <TextBlock Classes="label" Margin="26,0,0,0" TextWrapping="Wrap"
+                                 Text="Chrome, Discord and the rest keep running, but step aside when your game wants the processor." />
+                    </StackPanel>
 
-            </StackPanel>
+                    <StackPanel Spacing="2">
+                      <CheckBox x:Name="SimpleFullSpeed" Content="Keep your PC at full speed" Click="OnSimpleChanged" />
+                      <TextBlock Classes="label" Margin="26,0,0,0" TextWrapping="Wrap"
+                                 Text="Stops Windows from slowing the processor down to save power in the middle of a match." />
+                    </StackPanel>
+
+                    <StackPanel Spacing="2">
+                      <CheckBox x:Name="SimpleNoRecording" Content="Turn off background recording" Click="OnSimpleChanged" />
+                      <TextBlock Classes="label" Margin="26,0,0,0" TextWrapping="Wrap"
+                                 Text="Windows quietly records gameplay by default. Turning it off frees up whatever it was using." />
+                    </StackPanel>
+
+                    <StackPanel Spacing="2">
+                      <CheckBox x:Name="SimpleNetwork" Content="Put your game first on your internet" Click="OnSimpleChanged" />
+                      <TextBlock Classes="label" Margin="26,0,0,0" TextWrapping="Wrap"
+                                 Text="Slows Steam and cloud backups down while you play, so your uploads stop fighting your game. Does not change how far your data has to travel - nothing can." />
+                    </StackPanel>
+
+                    <StackPanel Spacing="2">
+                      <CheckBox x:Name="SimpleFreeze" Content="Freeze apps you are not using (aggressive)" Click="OnSimpleChanged" />
+                      <TextBlock Classes="label" Margin="26,0,0,0" TextWrapping="Wrap"
+                                 Text="Pauses browsers and cloud sync outright until you finish. Automatically disabled for anti-cheat games." />
+                    </StackPanel>
+
+                    <StackPanel Spacing="2">
+                      <CheckBox x:Name="SimpleSafe" Content="Stay safe in anti-cheat games" IsChecked="True" Click="OnSimpleChanged" />
+                      <TextBlock Classes="label" Margin="26,0,0,0" TextWrapping="Wrap"
+                                 Text="In Fortnite, Call of Duty, Rainbow Six and the like, never go near the game itself. Strongly recommended." />
+                    </StackPanel>
+
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                  <StackPanel Spacing="6">
+                    <TextBlock Classes="h" Text="WHAT THIS WILL NOT DO" />
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#BCC3D0"
+                               Text="It will not give you a new graphics card. On a healthy PC the change to average FPS is usually too small to see - independent tests of popular boosters found a median of about 2 FPS. Where it can genuinely help is stutter: the occasional frame that hitches while something else grabs the processor. Run the benchmark on the Control tab and find out for your machine instead of taking anyone's word for it." />
+                  </StackPanel>
+                </Border>
+
+              </StackPanel>
+
+              <!-- every knob, with what it actually calls -->
+              <StackPanel x:Name="AdvancedPanel" Spacing="12" IsVisible="False">
+
+                <Border Classes="card">
+                  <StackPanel Spacing="10">
+                    <TextBlock Classes="h" Text="TARGET PROCESS" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="130" />
+                      <ComboBox x:Name="GamePriority" Width="180" SelectedIndex="4">
+                        <ComboBoxItem>Idle</ComboBoxItem>
+                        <ComboBoxItem>BelowNormal</ComboBoxItem>
+                        <ComboBoxItem>Normal</ComboBoxItem>
+                        <ComboBoxItem>AboveNormal</ComboBoxItem>
+                        <ComboBoxItem>High</ComboBoxItem>
+                        <ComboBoxItem>RealTime</ComboBoxItem>
+                      </ComboBox>
+                    </StackPanel>
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="SetPriorityClass on the game handle. RealTime (0x100) outranks input, audio and parts of the GPU driver path; it usually costs frame-time consistency rather than buying it." />
+                    <TextBlock x:Name="RealtimeWarning" FontSize="11" Foreground="#D9B45C" TextWrapping="Wrap" IsVisible="False"
+                               Text="RealTime selected. Expect input lag and audio glitching before you expect frames." />
+
+                    <CheckBox x:Name="GamePCore" Content="Affinity: P-cores only" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="SetProcessAffinityMask to the union of cores whose EfficiencyClass equals the maximum reported by GetLogicalProcessorInformationEx(RelationProcessorCore). Group 0 only." />
+
+                    <CheckBox x:Name="GameNoThrottle" Content="Clear PROCESS_POWER_THROTTLING_EXECUTION_SPEED" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="SetProcessInformation(ProcessPowerThrottling) with ControlMask=EXECUTION_SPEED and StateMask=0, so the scheduler may never classify the game as EcoQoS." />
+
+                    <CheckBox x:Name="GameIgnoreTimer" Content="Set PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="Opts the process out of the per-process timer-resolution policy introduced in Windows 11 22H2, so the global 0.5 ms resolution applies to it." />
+
+                    <TextBlock Classes="label" TextWrapping="Wrap" Foreground="#E58A80"
+                               Text="All of the above are skipped entirely when safe mode is active and the title runs kernel anti-cheat: the game handle is never opened." />
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                  <StackPanel Spacing="10">
+                    <TextBlock Classes="h" Text="EVERY OTHER PROCESS" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="130" />
+                      <ComboBox x:Name="BackgroundPriority" Width="180" SelectedIndex="0">
+                        <ComboBoxItem>Idle</ComboBoxItem>
+                        <ComboBoxItem>BelowNormal</ComboBoxItem>
+                        <ComboBoxItem>Normal</ComboBoxItem>
+                      </ComboBox>
+                    </StackPanel>
+
+                    <CheckBox x:Name="BgEco" Content="EcoQoS (efficiency mode)" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="ControlMask and StateMask both EXECUTION_SPEED. The scheduler prefers E-cores and lower frequency for these processes. This is the same mechanism behind the green leaf in Task Manager." />
+
+                    <CheckBox x:Name="BgECore" Content="Affinity: E-cores only" />
+                    <CheckBox x:Name="BgSuspend" Content="NtSuspendProcess on the freeze list" Click="OnSuspendToggled" />
+                    <TextBlock x:Name="SuspendNote" Classes="label" TextWrapping="Wrap"
+                               Text="Undocumented but stable since NT 4. A frozen process misses network keepalives and watchdog timers, so chat clients and sync agents can reconnect badly on resume. Never applied to the NeverTouch or ThrottleOnly tiers, and never in safe mode." />
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBlock Classes="label" Text="Job object CPU cap %" VerticalAlignment="Center" Width="130" />
+                      <TextBox x:Name="BgCpuCap" Text="0" Width="70" />
+                      <TextBlock Classes="label" Text="0 = none" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="JOBOBJECT_CPU_RATE_CONTROL_INFORMATION with ENABLE|HARD_CAP, CpuRate in 1/100 of a percent. Jobs are named so a later run can reopen and lift a cap it did not set." />
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                  <StackPanel Spacing="10">
+                    <TextBlock Classes="h" Text="MACHINE STATE" />
+                    <CheckBox x:Name="SysPower" Content="Ultimate Performance power scheme" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61, reusing an existing copy rather than littering the scheme list. Previous scheme GUID is journalled." />
+
+                    <CheckBox x:Name="SysParking" Content="PROCTHROTTLEMIN 100, CPMINCORES 100" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="Minimum processor state 100% and core parking disabled on the active scheme, AC and DC." />
+
+                    <CheckBox x:Name="SysTimer" Content="NtSetTimerResolution to 0.5 ms" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="Held only while the process lives, and released automatically on exit. Since Windows 11 22H2 this is per-process unless a process opts out via IGNORE_TIMER_RESOLUTION." />
+
+                    <CheckBox x:Name="SysMmcss" Content="MMCSS Tasks\Games tuning" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="SystemResponsiveness=0, and the Games task class set to GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High. Exact previous values are journalled, including 'did not exist'." />
+
+                    <CheckBox x:Name="SysGameDvr" Content="Disable Game DVR" />
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                  <StackPanel Spacing="10">
+                    <TextBlock Classes="h" Text="NETWORK" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBlock Classes="label" Text="Preferred adapter" VerticalAlignment="Center" Width="130" />
+                      <TextBox x:Name="NetAdapter" Text="Ethernet" Width="180" />
+                    </StackPanel>
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="Set-NetIPInterface -InterfaceMetric 1, so routing prefers this adapter. Previous metric and whether it was automatic are journalled." />
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBlock Classes="label" Text="DSCP mark" VerticalAlignment="Center" Width="130" />
+                      <TextBox x:Name="NetDscp" Text="46" Width="70" />
+                    </StackPanel>
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="New-NetQosPolicy -DSCPAction on the game executable. 46 is Expedited Forwarding. Windows overwrites DSCP set by applications directly, which is why this has to be a policy - and it is typically stripped or ignored past your ISP's edge, so treat it as a LAN and Wi-Fi (WMM) measure, not a ping reducer." />
+
+                    <CheckBox x:Name="NetThrottle" Content="ThrottleRateActionBitsPerSecond on bulk uploaders" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="Caps Steam, Epic, OneDrive, Dropbox and Backblaze to 1 Mbit/s for the session. This is the networking lever with a reliable effect: your own uploads filling the uplink queue is the most common self-inflicted source of in-game jitter. Downstream shaping fundamentally has to happen at the router." />
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                  <StackPanel Spacing="10">
+                    <TextBlock Classes="h" Text="SAFETY TIERS" />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="NeverTouch - anti-cheat (EAC, BattlEye, Vanguard, ACE, GameGuard), csrss, wininit, lsass, services, dwm, audiodg, Defender, and anything in session 0. Not opened, not modified, at any aggression level." />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="ThrottleOnly - Steam, Epic, Battle.net, EA, Discord, NVIDIA and AMD containers, RTSS, OBS. Priority and EcoQoS only; never frozen, never capped." />
+                    <TextBlock Classes="label" TextWrapping="Wrap"
+                               Text="Full - everything else. PID reuse is guarded by comparing process start time against the journal before anything is restored." />
+                  </StackPanel>
+                </Border>
+
+              </StackPanel>
+
+            </Grid>
           </ScrollViewer>
         </TabItem>
 

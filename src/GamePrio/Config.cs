@@ -90,6 +90,10 @@ public sealed class Profile
         /// {process} {out} {seconds} are substituted. Check against your PresentMon version.
         public string PresentMonArgs { get; set; } =
             "-process_name {process} -output_file {out} -timed {seconds} -terminate_after_timed -stop_existing_session -no_top";
+
+        /// Streaming form used by the live HUD. {process} is substituted.
+        public string PresentMonLiveArgs { get; set; } =
+            "-process_name {process} -output_stdout -stop_existing_session -no_top";
     }
 
     private static readonly JsonSerializerOptions Opts = new()
