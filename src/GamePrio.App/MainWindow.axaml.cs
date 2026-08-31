@@ -469,8 +469,16 @@ public partial class MainWindow : Window
         _hud.Closed += (_, _) => { _hud = null; _monitor?.Stop(); Dispatcher.UIThread.Post(UpdateHudButton); };
         _hud.Show();
 
-        Log.Info($"live counter following {target}.exe - drag it anywhere, click its top-right X to close");
-        Log.Dim("  separate always-on-top window, not an in-game overlay: nothing is injected into the game.");
+        string presentMon = LiveMonitor.FindPresentMon(_engine.Profile.Bench.PresentMonPath);
+        if (!File.Exists(presentMon))
+            Log.Warn("PresentMon not found - the counter will show CPU and RAM but no FPS. " +
+                     "Put PresentMon.exe next to strykr.exe and reopen it.");
+        else
+            Log.Dim($"  frame data from {presentMon}");
+
+        Log.Info($"live counter following {target}.exe - top-left corner, click-through, close it with this button");
+        Log.Dim("  separate always-on-top window, not an in-game overlay: nothing is injected into the game,");
+        Log.Dim("  and the mouse passes straight through it so it can never eat a click.");
         UpdateHudButton();
     }
 

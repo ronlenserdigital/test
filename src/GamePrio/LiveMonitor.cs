@@ -32,16 +32,54 @@ public sealed class LiveMonitor : IDisposable
 
     public event Action<LiveStats> Updated;
 
+    /// <summary>Says what to do, not just what failed.</summary>
+    public const string PresentMonMissingNote =
+        "No FPS data: PresentMon not found. Put PresentMon.exe next to strykr.exe (get it from Intel), then reopen the counter.";
+
     public bool IsRunning => _presentMon is { HasExited: false };
+
+    /// <summary>
+    /// Where PresentMon might reasonably be. Frame data is the one thing this cannot
+    /// synthesise, so it is worth looking properly before giving up.
+    /// </summary>
+    public static string FindPresentMon(string configured)
+    {
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(configured)) candidates.Add(configured);
+
+        foreach (var dir in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
+            foreach (var name in new[] { "PresentMon.exe", "PresentMon-2.3.1-x64.exe", "PresentMon-1.10.0-x64.exe" })
+                if (!string.IsNullOrEmpty(dir)) candidates.Add(Path.Combine(dir, name));
+
+        foreach (var root in new[]
+                 {
+                     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+                 })
+        {
+            if (string.IsNullOrEmpty(root)) continue;
+            candidates.Add(Path.Combine(root, "Intel", "PresentMon", "PresentMon.exe"));
+            candidates.Add(Path.Combine(root, "PresentMon", "PresentMon.exe"));
+        }
+
+        foreach (var candidate in candidates)
+        {
+            try { if (File.Exists(candidate)) return candidate; } catch { }
+        }
+
+        // Anything bare is left for the OS to resolve against PATH.
+        return string.IsNullOrWhiteSpace(configured) ? "PresentMon.exe" : configured;
+    }
 
     public void Start(Profile profile, string processName)
     {
         Stop();
 
+        string exe = FindPresentMon(profile.Bench.PresentMonPath);
         string args = profile.Bench.PresentMonLiveArgs.Replace("{process}", processName + ".exe");
         try
         {
-            var psi = new ProcessStartInfo(profile.Bench.PresentMonPath, args)
+            var psi = new ProcessStartInfo(exe, args)
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -57,14 +95,13 @@ public sealed class LiveMonitor : IDisposable
                 Task.Run(() => Pump(_presentMon));
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _presentMon = null;
-            _note = "no frame data - " + ex.Message;
+            _note = PresentMonMissingNote;
         }
 
-        if (_presentMon == null && _note.Length == 0)
-            _note = "no frame data - PresentMon not found";
+        if (_presentMon == null && _note.Length == 0) _note = PresentMonMissingNote;
 
         _ticker = new System.Threading.Timer(_ => Publish(), null, 250, 250);
     }

@@ -2,55 +2,72 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="GamePrio.App.HudWindow"
         Title="STRYKR HUD"
-        Width="224" Height="158"
+        Width="330" Height="230"
         SystemDecorations="None"
         Topmost="True"
         ShowInTaskbar="False"
+        ShowActivated="False"
         CanResize="False"
+        WindowStartupLocation="Manual"
+        TransparencyLevelHint="Transparent"
         Background="Transparent">
 
-  <Border Background="#E60A0A0C" BorderBrush="#3A1218" BorderThickness="1" CornerRadius="9"
-          Padding="14,11" BoxShadow="0 0 26 0 #4DE01F2D">
-    <StackPanel Spacing="3">
+  <!--
+    No panel, no plate. Legibility over arbitrary game art comes from a hard black
+    halo behind every glyph, so the readout works on snow and on a night map alike.
+  -->
+  <StackPanel Margin="20,16" Spacing="0">
+    <StackPanel.Effect>
+      <DropShadowEffect BlurRadius="7" Color="Black" Opacity="1" OffsetX="0" OffsetY="0" />
+    </StackPanel.Effect>
 
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0" Text="STRYKR"
-                   FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
-                   FontSize="10" FontWeight="Bold" Foreground="#E01F2D" LetterSpacing="1.4"
-                   VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Text="drag  ·  ✕" FontSize="9" Foreground="#5A5B64"
-                   VerticalAlignment="Center" />
-      </Grid>
+    <TextBlock Text="STRYKR"
+               FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
+               FontSize="12" FontWeight="Bold" Foreground="#FF2A36" LetterSpacing="2.6" />
 
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock x:Name="FpsText" Text="--" FontSize="38" FontWeight="Bold"
-                   Foreground="#FFFFFF"
-                   FontFamily="Bahnschrift, Consolas, monospace" />
-        <TextBlock Text="FPS" FontSize="10" Foreground="#E01F2D" FontWeight="Bold"
-                   VerticalAlignment="Bottom" Margin="0,0,0,9" LetterSpacing="1" />
-      </StackPanel>
-
-      <Border Height="1" Background="#1E1F26" Margin="0,3,0,5" />
-
-      <Grid ColumnDefinitions="84,*" RowDefinitions="Auto,Auto,Auto,Auto">
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="frame time" FontSize="10" Foreground="#63646E" />
-        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="FrameTimeText" Text="--" FontSize="10"
-                   Foreground="#C9CAD2" FontFamily="Consolas, monospace" />
-
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="1% low" FontSize="10" Foreground="#63646E" />
-        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LowText" Text="--" FontSize="10"
-                   Foreground="#FF4A54" FontWeight="Bold" FontFamily="Consolas, monospace" />
-
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="stutters/min" FontSize="10" Foreground="#63646E" />
-        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="StutterText" Text="--" FontSize="10"
-                   Foreground="#C9CAD2" FontFamily="Consolas, monospace" />
-
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="cpu / ram" FontSize="10" Foreground="#63646E" />
-        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="SystemText" Text="--" FontSize="10"
-                   Foreground="#C9CAD2" FontFamily="Consolas, monospace" />
-      </Grid>
-
-      <TextBlock x:Name="NoteText" Text="" FontSize="9" Foreground="#D9B45C" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" Spacing="9" Margin="0,2,0,0">
+      <TextBlock x:Name="FpsText" Text="--" FontSize="62" FontWeight="Bold" Foreground="#FFFFFF"
+                 FontFamily="Bahnschrift, Consolas, monospace" LineHeight="66" />
+      <TextBlock Text="FPS" FontSize="15" FontWeight="Bold" Foreground="#FF2A36"
+                 FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
+                 VerticalAlignment="Bottom" Margin="0,0,0,13" LetterSpacing="1.4" />
     </StackPanel>
-  </Border>
+
+    <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="1% LOW" Classes="k" />
+      <TextBlock Grid.Row="0" Grid.Column="1" x:Name="LowText" Text="--" Classes="v"
+                 Foreground="#FF6069" FontWeight="Bold" />
+
+      <TextBlock Grid.Row="1" Grid.Column="0" Text="FRAME" Classes="k" />
+      <TextBlock Grid.Row="1" Grid.Column="1" x:Name="FrameTimeText" Text="--" Classes="v" />
+
+      <TextBlock Grid.Row="2" Grid.Column="0" Text="STUTTER" Classes="k" />
+      <TextBlock Grid.Row="2" Grid.Column="1" x:Name="StutterText" Text="--" Classes="v" />
+
+      <TextBlock Grid.Row="3" Grid.Column="0" Text="CPU/RAM" Classes="k" />
+      <TextBlock Grid.Row="3" Grid.Column="1" x:Name="SystemText" Text="--" Classes="v" />
+    </Grid>
+
+    <TextBlock x:Name="NoteText" Text="" FontSize="12.5" FontWeight="SemiBold" Foreground="#FFC53D"
+               TextWrapping="Wrap" MaxWidth="290" Margin="0,10,0,0" LineHeight="17" />
+  </StackPanel>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.k">
+      <Setter Property="FontFamily" Value="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#B9BAC4" />
+      <Setter Property="LetterSpacing" Value="1.1" />
+      <Setter Property="Width" Value="94" />
+      <Setter Property="Margin" Value="0,0,0,3" />
+    </Style>
+    <Style Selector="TextBlock.v">
+      <Setter Property="FontFamily" Value="Bahnschrift, Consolas, monospace" />
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="Margin" Value="0,0,0,3" />
+    </Style>
+  </Window.Styles>
 </Window>

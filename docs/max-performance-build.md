@@ -294,22 +294,24 @@ panel. The hidden panel holds stale values, and reading it would silently undo t
 
 ## The live FPS counter
 
-The **Live FPS counter** button opens a small always-on-top window showing FPS, frame
-time, 1% low over a rolling minute, stutter count, and CPU/RAM. Drag it anywhere; click
-the X in its top-right corner to close.
+The **Live FPS counter** button opens a readout in the **top-left corner** of the primary
+screen. It has no panel or plate behind it - every glyph carries a hard black halo instead,
+so it stays legible over snow, over a night map, over anything. FPS is the large number;
+**1% LOW** sits directly beneath it in red, because that is the figure worth watching.
+
+It is **click-through**: `WS_EX_TRANSPARENT` plus `WS_EX_NOACTIVATE` mean the mouse passes
+straight to the game and the overlay can never eat a click or steal focus mid-fight. It is
+also kept out of alt-tab. Close it from the same button in the main window.
 
 It is **not an in-game overlay**. A real overlay means injecting into the game process,
 which is exactly what safe mode exists to avoid and what anti-cheat hunts for. This is a
-separate window fed by PresentMon's ETW stream - nothing is injected, and no handle is
-opened on the game. The trade-off is honest: it shows over borderless and windowed
-games, and it will not show over exclusive fullscreen. Almost every modern title
-defaults to borderless.
+separate always-on-top window fed by PresentMon's ETW stream - nothing injected, no handle
+on the game. The trade-off is honest: it draws over borderless and windowed games, and not
+over exclusive fullscreen. Almost every modern title defaults to borderless.
 
-Frame data needs PresentMon on PATH. Without it the counter still shows CPU and RAM and
-says plainly that it has no frame data, rather than inventing numbers.
-
-Watch the **1% low** line rather than the big FPS number. That is where background
-contention shows up.
+Frame data needs PresentMon. STRYKR looks for it beside the executable, in the working
+directory, on PATH and under Program Files; if it is genuinely missing the overlay says so
+in plain words and still shows CPU and RAM, rather than printing a stack trace.
 
 ## Knowing whether it worked
 
