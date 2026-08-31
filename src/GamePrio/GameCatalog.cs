@@ -1,4 +1,4 @@
-namespace GamePrio.App;
+namespace GamePrio;
 
 public enum AntiCheat
 {

@@ -28,12 +28,32 @@ public sealed class Governor
 
     // ---------------------------------------------------------------- apply
 
+    /// <summary>True while this apply is running against a kernel-anti-cheat title with safe mode on.</summary>
+    public bool SafeModeActive { get; private set; }
+
     public Journal Apply(Process game)
     {
+        var entry = GameCatalog.FindByExecutable(game.ProcessName);
+        SafeModeActive = _profile.Safety.AntiCheatSafeMode && entry is { AntiCheat: AntiCheat.Kernel };
+
+        if (SafeModeActive)
+        {
+            Log.Warn($"{entry.Name} runs kernel anti-cheat ({entry.AntiCheatName}) - SAFE MODE");
+            Log.Info("  the game process is not opened at all, nothing is suspended or CPU-capped,");
+            Log.Info("  and SeDebugPrivilege is not requested. Background de-prioritisation,");
+            Log.Info("  power/timer/MMCSS tuning and network QoS still apply.");
+        }
+        else
+        {
+            // Only reach for the privilege that lets us touch processes we do not own
+            // when we are actually going to do the aggressive things.
+            Native.EnablePrivilege("SeDebugPrivilege");
+        }
+
         var journal = new Journal { Profile = _profile.Name, StartedUtc = DateTime.UtcNow };
         journal.Save();   // an empty journal first, so even a crash mid-apply is recoverable
 
-        ApplyToGame(game, journal);
+        if (!SafeModeActive) ApplyToGame(game, journal);
         ApplyToBackground(game, journal);
         Tuners.ApplySystem(_profile, journal);
         Tuners.ApplyNetwork(_profile, game, journal);
@@ -127,7 +147,7 @@ public sealed class Governor
                         changed = true;
                     }
 
-                    if (tier == Tier.Full && _profile.Background.CpuCapPercent is > 0 and < 100)
+                    if (!SafeModeActive && tier == Tier.Full && _profile.Background.CpuCapPercent is > 0 and < 100)
                     {
                         entry.JobName = $"GamePrio_cap_{proc.Id}";
                         if (ApplyCpuCap(h, entry.JobName, _profile.Background.CpuCapPercent))
@@ -139,7 +159,7 @@ public sealed class Governor
                     }
 
                     // Suspension goes last: once frozen we can no longer talk to it.
-                    if (tier == Tier.Full && _profile.Background.Suspend &&
+                    if (!SafeModeActive && tier == Tier.Full && _profile.Background.Suspend &&
                         _profile.Background.SuspendList.Contains(Key(proc.ProcessName)))
                     {
                         if (Native.NtSuspendProcess(h) == 0)

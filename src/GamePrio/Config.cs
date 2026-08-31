@@ -74,6 +74,14 @@ public sealed class Profile
         public List<string> ThrottleOnly { get; set; } = new();
         /// Anti-cheat processes are in NeverTouch for a reason. Flip at your own risk.
         public bool AllowTouchingAntiCheat { get; set; } = false;
+
+        /// <summary>
+        /// When the detected game runs kernel-level anti-cheat, drop to the levers that do
+        /// not interact with processes anti-cheat cares about: the game itself is never
+        /// opened, nothing is suspended, nothing is CPU-capped, and SeDebugPrivilege is
+        /// never requested. Background de-prioritisation and machine/network tuning stay on.
+        /// </summary>
+        public bool AntiCheatSafeMode { get; set; } = true;
     }
 
     public sealed class BenchSettings

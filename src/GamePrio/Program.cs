@@ -284,8 +284,10 @@ internal static class Program
 
     private static void EnablePrivileges()
     {
-        // SeDebug: open processes owned by other users. SeIncreaseBasePriority: raise above Normal.
-        foreach (var privilege in new[] { "SeDebugPrivilege", "SeIncreaseBasePriorityPrivilege",
+        // SeDebugPrivilege is deliberately NOT here: it is what lets us touch processes we
+        // do not own, and it is part of what anti-cheat looks for. Governor.Apply requests
+        // it only when safe mode is off, i.e. only when it is actually needed.
+        foreach (var privilege in new[] { "SeIncreaseBasePriorityPrivilege",
                                           "SeIncreaseQuotaPrivilege", "SeCreateGlobalPrivilege" })
         {
             if (!Native.EnablePrivilege(privilege)) Log.Dim($"privilege not granted: {privilege}");

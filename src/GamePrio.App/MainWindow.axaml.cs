@@ -32,7 +32,7 @@ public partial class MainWindow : Window
         LoadProfileIntoControls(profile);
         RefreshStatus();
 
-        Native.EnablePrivilege("SeDebugPrivilege");
+        // SeDebugPrivilege is requested by Governor.Apply only when safe mode is off.
         Native.EnablePrivilege("SeIncreaseBasePriorityPrivilege");
         Native.EnablePrivilege("SeIncreaseQuotaPrivilege");
 
@@ -175,12 +175,15 @@ public partial class MainWindow : Window
             banner.IsVisible = kernel.Count > 0;
             if (kernel.Count > 0)
             {
-                text.Text =
-                    $"{string.Join(", ", kernel.Select(g => $"{g.Name} ({g.AntiCheatName})"))} " +
-                    "run kernel-level anti-cheat. gameprio never touches anti-cheat or system processes, and never " +
-                    "injects into the game - but suspending background processes is the most aggressive thing it does " +
-                    "and it is being done while a kernel driver is watching. Prove the profile on a single-player " +
-                    "title first, and consider leaving suspension off for these.";
+                string titles = string.Join(", ", kernel.Select(g => $"{g.Name} ({g.AntiCheatName})"));
+                text.Text = Check("SafeMode")
+                    ? $"{titles}. Safe mode is ON: while one of these is running, the game process is never " +
+                      "opened, nothing is suspended or CPU-capped, and SeDebugPrivilege is never requested. " +
+                      "Background de-prioritisation, power/timer/MMCSS tuning and network QoS still apply - " +
+                      "which is where most of the benefit lives anyway."
+                    : $"{titles}. Safe mode is OFF: the full profile will be applied, including opening the game " +
+                      "process and suspending background processes, while a kernel anti-cheat driver watches. " +
+                      "No tool can promise this is safe. Prove the profile on a single-player title first.";
             }
         }
 
@@ -238,6 +241,7 @@ public partial class MainWindow : Window
             SetText("NetAdapter", p.Network.PreferredInterfaceAlias ?? "");
             SetText("NetDscp", p.Network.Dscp.ToString());
             SetCheck("NetThrottle", p.Network.ThrottleBulkUploaders);
+            SetCheck("SafeMode", p.Safety.AntiCheatSafeMode);
 
             var path = this.FindControl<TextBlock>("ProfilePathText");
             if (path != null) path.Text = _profilePath;
@@ -275,6 +279,7 @@ public partial class MainWindow : Window
         p.Network.PreferredInterfaceAlias = Text("NetAdapter");
         p.Network.Dscp = ParseInt("NetDscp", 0);
         p.Network.ThrottleBulkUploaders = Check("NetThrottle");
+        p.Safety.AntiCheatSafeMode = Check("SafeMode");
 
         var warn = this.FindControl<TextBlock>("RealtimeWarning");
         if (warn != null) warn.IsVisible = string.Equals(p.Game.Priority, "RealTime", StringComparison.OrdinalIgnoreCase);
@@ -297,6 +302,14 @@ public partial class MainWindow : Window
         _engine.SetProfile(profile);
         LoadProfileIntoControls(profile);
         Log.Info("profile reloaded");
+    }
+
+    private void OnSafeModeToggled(object sender, RoutedEventArgs e)
+    {
+        ApplyControlsToProfile();
+        RefreshSelection();
+        if (!Check("SafeMode"))
+            Log.Warn("safe mode OFF - kernel-anti-cheat titles will get the full profile, game process included");
     }
 
     private void OnSuspendToggled(object sender, RoutedEventArgs e)

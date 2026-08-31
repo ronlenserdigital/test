@@ -116,6 +116,21 @@ internal static class TestMain
         Check("opt-out drops the anti-cheat fence", !prof2.Safety.NeverTouch.Contains("easyanticheat"));
         Check("critical system fence survives the opt-out", prof2.Safety.NeverTouch.Contains("lsass"));
 
+        Console.WriteLine("\nAnti-cheat catalog and safe mode");
+        var fn = GameCatalog.FindByExecutable("FortniteClient-Win64-Shipping");
+        Check("Fortnite found by exe", fn != null && fn.Name == "Fortnite");
+        Check("Fortnite classed kernel anti-cheat", fn != null && fn.AntiCheat == AntiCheat.Kernel, fn?.AntiCheatName);
+        Check("trailing .exe tolerated", GameCatalog.FindByExecutable("cs2.exe")?.Name == "Counter-Strike 2");
+        Check("Call of Duty in catalog", GameCatalog.FindByExecutable("cod")?.AntiCheat == AntiCheat.Kernel);
+        Check("Rainbow Six in catalog", GameCatalog.FindByExecutable("RainbowSix_BE")?.AntiCheat == AntiCheat.Kernel);
+        Check("single-player title classed none", GameCatalog.FindByExecutable("Cyberpunk2077")?.AntiCheat == AntiCheat.None);
+        Check("unknown exe returns null", GameCatalog.FindByExecutable("notagame") == null);
+        Check("safe mode defaults ON", new Profile().Safety.AntiCheatSafeMode);
+        Check("every catalog entry has an executable", GameCatalog.All.All(g => g.Executables.Length > 0));
+        Check("no duplicate executables across catalog",
+              GameCatalog.All.SelectMany(g => g.Executables).Select(e => e.ToLowerInvariant()).Distinct().Count()
+              == GameCatalog.All.Sum(g => g.Executables.Length));
+
         Console.WriteLine("\nPriority mapping");
         Check("High round-trips", Profile.PriorityName(Profile.PriorityClassFor("High")) == "High");
         Check("Idle round-trips", Profile.PriorityName(Profile.PriorityClassFor("idle")) == "Idle");

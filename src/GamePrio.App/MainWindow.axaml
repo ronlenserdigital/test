@@ -68,9 +68,11 @@
 
               <Border x:Name="AntiCheatBanner" Classes="card" IsVisible="False"
                       Background="#2E1A18" BorderBrush="#E58A80">
-                <StackPanel Spacing="4">
+                <StackPanel Spacing="8">
                   <TextBlock Text="KERNEL ANTI-CHEAT SELECTED" FontSize="11" FontWeight="Bold" Foreground="#E58A80" />
                   <TextBlock x:Name="AntiCheatText" TextWrapping="Wrap" FontSize="12" Foreground="#E7EAF0" />
+                  <CheckBox x:Name="SafeMode" IsChecked="True" Click="OnSafeModeToggled"
+                            Content="Safe mode: never open the game process, never suspend, never request SeDebugPrivilege" />
                 </StackPanel>
               </Border>
 

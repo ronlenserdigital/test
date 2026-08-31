@@ -33,11 +33,42 @@ that decides what is safe to do:
 - **None** - Cyberpunk 2077, BG3, Starfield, Hogwarts Legacy, Witcher 3, RDR2,
   Palworld, Minecraft.
 
-Tick a kernel-anti-cheat title and the Control tab shows a banner naming it. gameprio
-never touches anti-cheat, system or launcher processes and never injects into the game,
-but suspension is the most aggressive thing it does and it is being done while a kernel
-driver watches. Prove a profile on a single-player title first. Anything not in the
-list can be added by executable name.
+Tick a kernel-anti-cheat title and the Control tab shows a banner naming it, plus the
+safe-mode switch described below. Anything not in the list can be added by executable name.
+
+### Anti-cheat safe mode (on by default)
+
+The risk in this tool is not spread evenly. Ranked, worst first:
+
+| What | Exposure |
+|---|---|
+| Suspending background processes | Highest - the most aggressive thing it does |
+| Opening a handle to the game process | High - EAC/BattlEye protect that handle |
+| `SeDebugPrivilege` | Moderate - cheats use it, so it is part of the signature |
+| Idle priority / EcoQoS on other processes | Low - Windows and Process Lasso do this routinely |
+| Power plan, timer resolution, MMCSS, Game DVR | Effectively none - no process interaction |
+| DSCP marking, upload throttling | Effectively none - Windows QoS policy, never touches the game |
+
+When the running game is one of the kernel-anti-cheat titles and `safety.antiCheatSafeMode`
+is true, the governor drops the top three rows entirely:
+
+- the game process is **never opened** - no priority, no affinity, no throttling flags
+- **nothing is suspended**, whatever the profile says
+- **nothing is CPU-capped**
+- **`SeDebugPrivilege` is never requested** - it is only enabled when safe mode is off
+
+Everything else still runs: background processes drop to Idle + EcoQoS + E-cores, the
+power plan, timer resolution, MMCSS and Game DVR settings apply, and the network policies
+apply. That is not a stripped-down mode so much as the Process Lasso approach - you win
+the cores by lowering everything else rather than by raising the game, so the game process
+never needs to be touched at all.
+
+`profile.fortnite.json` ships this configuration ready to use.
+
+Safe mode reduces exposure; it does not eliminate it. Anything running on the machine
+during a protected session carries some risk, and EAC and BattlEye have produced ban
+waves over software as innocuous as RGB control. The only zero-risk option is not running
+it alongside those titles.
 
 ## Build and run
 
