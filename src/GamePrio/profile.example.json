@@ -1,0 +1,57 @@
+{
+  "name": "max",
+
+  "game": {
+    "executables": ["Cyberpunk2077.exe", "eldenring.exe"],
+    "priority": "High",
+    "pCoreOnly": true,
+    "disablePowerThrottling": true,
+    "ignoreTimerResolution": true
+  },
+
+  "background": {
+    "priority": "Idle",
+    "ecoQoS": true,
+    "eCoreOnly": true,
+    "cpuCapPercent": 0,
+    "suspend": true,
+    "suspendList": [
+      "chrome", "msedge", "firefox", "brave", "opera",
+      "onedrive", "dropbox", "googledrivefs", "backblaze",
+      "slack", "teams", "outlook", "winword", "excel",
+      "adobe desktop service", "creative cloud", "acrobat",
+      "spotify", "itunes", "zoom", "code"
+    ],
+    "skipSystemProcesses": true
+  },
+
+  "system": {
+    "ultimatePerformancePowerPlan": true,
+    "minProcessorStatePercent": 100,
+    "disableCoreParking": true,
+    "timerResolutionMs": 0.5,
+    "mmcssGamesTuning": true,
+    "win32PrioritySeparation": null,
+    "disableGameDvr": true,
+    "stopServices": []
+  },
+
+  "network": {
+    "preferredInterfaceAlias": "Ethernet",
+    "dscp": 46,
+    "throttleBulkUploaders": true,
+    "bulkUploaders": ["steam", "epicgameslauncher", "onedrive", "dropbox", "backblaze"],
+    "bulkUploaderThrottleKbps": 1000
+  },
+
+  "safety": {
+    "neverTouch": [],
+    "throttleOnly": [],
+    "allowTouchingAntiCheat": false
+  },
+
+  "bench": {
+    "presentMonPath": "PresentMon.exe",
+    "presentMonArgs": "-process_name {process} -output_file {out} -timed {seconds} -terminate_after_timed -stop_existing_session -no_top"
+  }
+}
