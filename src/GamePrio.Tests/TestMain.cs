@@ -192,6 +192,23 @@ internal static class TestMain
         Check("re-running does not rewrite the tool",
               !File.Exists(unpacked) || File.GetLastWriteTimeUtc(unpacked) == firstWrite);
 
+        Console.WriteLine("\nAuto-detect");
+        Check("auto-detect defaults ON", new Profile().Game.AutoDetect);
+        Check("browsers are not games", GameDetector.IsNotAGame("chrome") && GameDetector.IsNotAGame("msedge"));
+        Check("launchers are not games", GameDetector.IsNotAGame("steam")
+              && GameDetector.IsNotAGame("EpicGamesLauncher") && GameDetector.IsNotAGame("battle.net"));
+        Check("chat and capture are not games", GameDetector.IsNotAGame("discord") && GameDetector.IsNotAGame("obs64"));
+        Check("the shell is not a game", GameDetector.IsNotAGame("explorer"));
+        Check("strykr never detects itself", GameDetector.IsNotAGame("strykr") && GameDetector.IsNotAGame("gameprio"));
+        Check("anti-cheat is not a game", GameDetector.IsNotAGame("EasyAntiCheat") && GameDetector.IsNotAGame("vgc"));
+        Check("system processes are not games", GameDetector.IsNotAGame("csrss") && GameDetector.IsNotAGame("lsass"));
+        Check(".exe suffix tolerated", GameDetector.IsNotAGame("chrome.exe"));
+        Check("actual games are not excluded",
+              !GameDetector.IsNotAGame("FortniteClient-Win64-Shipping")
+              && !GameDetector.IsNotAGame("cs2") && !GameDetector.IsNotAGame("Cyberpunk2077"));
+        Check("detection survives with nothing running", GameDetector.Detect(new[] { "nothingrunning" }) == null
+              || true, "platform dependent, must not throw");
+
         Console.WriteLine("\nPriority mapping");
         Check("High round-trips", Profile.PriorityName(Profile.PriorityClassFor("High")) == "High");
         Check("Idle round-trips", Profile.PriorityName(Profile.PriorityClassFor("idle")) == "Idle");

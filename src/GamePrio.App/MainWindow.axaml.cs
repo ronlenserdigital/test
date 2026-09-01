@@ -45,6 +45,7 @@ public partial class MainWindow : Window
             var profile = LoadOrCreateProfile(_profilePath);
             _engine = new Engine(profile);
             _engine.Changed += () => Dispatcher.UIThread.Post(RefreshStatus);
+            _engine.UnknownGameDetected += found => Dispatcher.UIThread.Post(() => OnAutoDetected(found));
             LoadProfileIntoControls(profile);
         });
 
@@ -595,6 +596,7 @@ public partial class MainWindow : Window
         p.Network.ThrottleBulkUploaders = network;
 
         p.Safety.AntiCheatSafeMode = Check("SimpleSafe");
+        p.Game.AutoDetect = Check("AutoDetect");
         SetCheck("SafeMode", p.Safety.AntiCheatSafeMode);
         RefreshSelection();
     }
@@ -615,6 +617,32 @@ public partial class MainWindow : Window
             SetCheck("SimpleSafe", p.Safety.AntiCheatSafeMode);
         }
         finally { _loading = false; }
+    }
+
+    /// <summary>A game found by detection joins the library, ticked, so it is visible and editable.</summary>
+    private void OnAutoDetected(Detection found)
+    {
+        var known = GameCatalog.FindByExecutable(found.ProcessName);
+        if (known != null && _gameChecks.TryGetValue(known, out var box))
+        {
+            box.IsChecked = true;
+        }
+        else
+        {
+            AddCustomRow(found.ProcessName, true);
+        }
+
+        RefreshSelection();
+        RefreshStatus();
+    }
+
+    private void OnAutoDetectToggled(object sender, RoutedEventArgs e)
+    {
+        if (_engine == null) return;
+        _engine.Profile.Game.AutoDetect = Check("AutoDetect");
+        Log.Info(Check("AutoDetect")
+            ? "auto-detect on - any catalog title, or a window filling the screen, will be picked up"
+            : "auto-detect off - only ticked games are watched");
     }
 
     private void OnSafeModeToggled(object sender, RoutedEventArgs e)
@@ -745,6 +773,7 @@ public partial class MainWindow : Window
         p.Network.Dscp = ParseInt("NetDscp", 0);
         p.Network.ThrottleBulkUploaders = Check("NetThrottle");
         p.Safety.AntiCheatSafeMode = Check("SafeMode");
+        p.Game.AutoDetect = Check("AutoDetect");
 
         SetVisible("RealtimeWarning",
             string.Equals(p.Game.Priority, "RealTime", StringComparison.OrdinalIgnoreCase));
@@ -782,7 +811,11 @@ public partial class MainWindow : Window
             ? $"hybrid ({pCores} P / {eCores} E of {Environment.ProcessorCount} logical CPUs)"
             : $"uniform ({Environment.ProcessorCount} logical CPUs)");
         SetText("StatusTimer", $"{timerMs:0.###} ms");
-        SetText("StatusGame", _engine.DetectedGame ?? "none");
+        var detection = _engine.LastDetection;
+        SetText("StatusGame", _engine.DetectedGame == null
+            ? (Check("AutoDetect") ? "none - auto-detect watching" : "none")
+            : detection == null ? _engine.DetectedGame
+            : $"{_engine.DetectedGame}  ·  {detection.Reason}");
         SetText("StatusJournal", File.Exists(Journal.Path) ? "open - changes are live" : "clean");
         SetText("StatusPower", _powerPlan);
 

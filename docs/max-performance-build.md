@@ -44,6 +44,30 @@ Nothing was dropped in the redesign. Every feature is reachable:
 `Export report` writes a timestamped file to your Desktop: machine, full profile, and a
 complete verify pass read back out of Windows.
 
+## Auto-detect
+
+On by default, toggled beside GAME LIBRARY. You do not have to tick anything.
+
+Three tiers, most trustworthy first:
+
+1. **A ticked game that is running.** An explicit choice always outranks a guess.
+2. **A running title from the shipped catalog** - all 34, whether ticked or not.
+3. **A foreground window covering 90% or more of its monitor**, owned by a process that is
+   plainly not a desktop app. This is what catches a game the catalog has never heard of.
+
+Tier 3 needs a deny-list to be worth anything, because plenty of things go fullscreen
+without being games: browsers, Discord, Slack, Teams, Zoom, Spotify, OBS, editors, Office,
+video players, the shell, every launcher (Steam, Epic, Battle.net, EA, Ubisoft, Riot,
+Rockstar) - a launcher runs whenever the game does, so picking one would target the wrong
+process - plus every anti-cheat and system process, and STRYKR itself.
+
+A detected game joins the library ticked, so you can see what was picked and untick it if
+it guessed wrong. The STATUS card names both the game and the reason it was chosen
+(`selected in the library`, `known game`, `fullscreen window`), so detection is never a
+black box. Its executable also joins the profile for the session, which matters for three
+things: it is never swept as a background process, the QoS policy targets it, and the FPS
+counter follows it.
+
 ## What Start actually does
 
 Pressing **START · MAX PERFORMANCE** goes to max performance immediately. It does not

@@ -20,6 +20,11 @@ public sealed class Engine : IDisposable
     /// <summary>True once the game itself is running and has been attached.</summary>
     public bool GameAttached { get; private set; }
     public string DetectedGame { get; private set; }
+    /// <summary>What was found and why - shown so detection is never a black box.</summary>
+    public Detection LastDetection { get; private set; }
+
+    /// <summary>Raised when auto-detect finds a game that was not in the library.</summary>
+    public event Action<Detection> UnknownGameDetected;
 
     /// <summary>Raised whenever watching / applied / detected-game changes.</summary>
     public event Action Changed;
@@ -53,9 +58,9 @@ public sealed class Engine : IDisposable
     public void StartWatching()
     {
         if (IsWatching) return;
-        if (Profile.Game.Executables.Count == 0)
+        if (Profile.Game.Executables.Count == 0 && !Profile.Game.AutoDetect)
         {
-            Log.Error("no games selected - tick at least one in the library");
+            Log.Error("no games selected - tick one in the library, or turn auto-detect on");
             return;
         }
 
@@ -76,7 +81,11 @@ public sealed class Engine : IDisposable
             GameAttached = true;
             Raise();
         }
-        else Log.Info($"waiting for {string.Join(", ", Profile.Game.Executables)}");
+        else if (Profile.Game.Executables.Count > 0)
+            Log.Info($"waiting for {string.Join(", ", Profile.Game.Executables)}" +
+                     (Profile.Game.AutoDetect ? ", or any game auto-detect recognises" : ""));
+        else
+            Log.Info("waiting for any game - auto-detect is on");
 
         _watchCts = new CancellationTokenSource();
         var token = _watchCts.Token;
@@ -153,7 +162,7 @@ public sealed class Engine : IDisposable
     public void ApplyNow()
     {
         if (IsApplied) { Log.Warn("already applied"); return; }
-        if (Profile.Game.Executables.Count == 0)
+        if (Profile.Game.Executables.Count == 0 && !Profile.Game.AutoDetect)
             Log.Warn("no game ticked - applying machine-level settings only");
 
         lock (_gate) { _applied = _governor.BeginSession(); GameAttached = false; }
@@ -191,14 +200,45 @@ public sealed class Engine : IDisposable
         Raise();
     }
 
+    /// <summary>
+    /// A ticked game that is running wins. Failing that, and only with auto-detect on,
+    /// the detector gets a say - a catalog title, or a window filling a monitor.
+    /// </summary>
     private Process FindGame()
     {
         foreach (var proc in Process.GetProcesses())
         {
-            if (Profile.Game.Executables.Contains(proc.ProcessName.ToLowerInvariant())) return proc;
+            if (Profile.Game.Executables.Contains(proc.ProcessName.ToLowerInvariant()))
+            {
+                LastDetection = new Detection(proc.Id, proc.ProcessName, "selected in the library",
+                                              GameCatalog.FindByExecutable(proc.ProcessName));
+                return proc;
+            }
             proc.Dispose();
         }
-        return null;
+
+        if (!Profile.Game.AutoDetect) return null;
+
+        var found = GameDetector.Detect(Profile.Game.Executables);
+        if (found == null) return null;
+
+        try
+        {
+            var proc = Process.GetProcessById(found.Pid);
+            LastDetection = found;
+
+            // The detected executable joins the profile for this session: it must never be
+            // swept as a background process, and the QoS policy and HUD need to target it.
+            string key = found.ProcessName.ToLowerInvariant();
+            if (!Profile.Game.Executables.Contains(key))
+            {
+                Profile.Game.Executables.Add(key);
+                Log.Good($"auto-detected {found.Display} ({found.ProcessName}.exe) - {found.Reason}");
+                try { UnknownGameDetected?.Invoke(found); } catch { }
+            }
+            return proc;
+        }
+        catch { return null; }
     }
 
     /// <summary>Snapshot for the status panel.</summary>

@@ -17,6 +17,12 @@ public sealed class Profile
     {
         /// Executable names, with or without ".exe". First one found wins.
         public List<string> Executables { get; set; } = new();
+
+        /// <summary>
+        /// Find the game without being told: any running title from the shipped catalog,
+        /// or a foreground window filling a monitor. Ticked games still take priority.
+        /// </summary>
+        public bool AutoDetect { get; set; } = true;
         /// Idle | BelowNormal | Normal | AboveNormal | High | RealTime
         public string Priority { get; set; } = "High";
         public bool PCoreOnly { get; set; } = true;
