@@ -320,11 +320,11 @@
                 <StackPanel Spacing="14">
                   <TextBlock Classes="cardhead" Text="PICK A LEVEL" />
                   <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Button Classes="ghost" Content="Light touch" Click="OnPresetLight" />
-                    <Button Classes="danger" Content="Balanced" Click="OnPresetBalanced" />
-                    <Button Classes="ghost" Content="Maximum" Click="OnPresetMax" />
+                    <Button x:Name="PresetLight" Classes="ghost" Content="Light touch" Click="OnPresetLight" />
+                    <Button x:Name="PresetBalanced" Classes="ghost" Content="Balanced" Click="OnPresetBalanced" />
+                    <Button x:Name="PresetMax" Classes="ghost" Content="Maximum" Click="OnPresetMax" />
                   </StackPanel>
-                  <TextBlock Classes="body"
+                  <TextBlock x:Name="PresetSummary" Classes="body" Foreground="#EDEDF2"
                              Text="Balanced is the one to start with. Maximum also freezes apps you are not using, which is the most aggressive thing this does." />
                 </StackPanel>
               </Border>

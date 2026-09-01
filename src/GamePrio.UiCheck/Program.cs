@@ -70,6 +70,7 @@ internal static class Program
             "BenchSeconds", "BenchRuns", "BenchButton", "HudButton",
             "ModeSimpleBtn", "ModeAdvancedBtn", "SimplePanel", "AdvancedPanel",
             "SimpleQuiet", "SimpleFullSpeed", "SimpleNoRecording", "SimpleNetwork", "SimpleFreeze", "SimpleSafe",
+            "PresetLight", "PresetBalanced", "PresetMax", "PresetSummary",
             "GamePriority", "GamePCore", "GameNoThrottle", "GameIgnoreTimer", "RealtimeWarning",
             "BackgroundPriority", "BgEco", "BgECore", "BgSuspend", "BgCpuCap",
             "SysPower", "SysParking", "SysTimer", "SysMmcss", "SysGameDvr",
@@ -131,6 +132,53 @@ internal static class Program
             Click("ModeSimpleBtn");
             var presets = window.FindControl<StackPanel>("SimplePanel");
             Check("simple panel populated", presets != null && presets.Children.Count >= 3);
+
+            // PICK A LEVEL: the presets must actually move the switches under them.
+            bool Checked(string n) => window.FindControl<CheckBox>(n)?.IsChecked == true;
+
+            Click("PresetMax");
+            Check("Maximum ticks freezing", Checked("SimpleFreeze"),
+                  $"quiet={Checked("SimpleQuiet")} power={Checked("SimpleFullSpeed")} net={Checked("SimpleNetwork")} freeze={Checked("SimpleFreeze")}");
+            Check("Maximum ticks everything else",
+                  Checked("SimpleQuiet") && Checked("SimpleFullSpeed") && Checked("SimpleNetwork"));
+
+            Click("PresetLight");
+            Check("Light touch unticks freezing", !Checked("SimpleFreeze"));
+            Check("Light touch unticks power and network",
+                  !Checked("SimpleFullSpeed") && !Checked("SimpleNetwork"),
+                  $"power={Checked("SimpleFullSpeed")} net={Checked("SimpleNetwork")}");
+            Check("Light touch keeps background quieting", Checked("SimpleQuiet"));
+
+            Click("PresetBalanced");
+            Check("Balanced ticks power and network",
+                  Checked("SimpleFullSpeed") && Checked("SimpleNetwork"));
+            Check("Balanced leaves freezing off", !Checked("SimpleFreeze"));
+
+            var lightBtn = window.FindControl<Button>("PresetLight");
+            var balancedBtn = window.FindControl<Button>("PresetBalanced");
+            var maxBtn = window.FindControl<Button>("PresetMax");
+            Check("the active preset is visibly marked",
+                  balancedBtn != null && balancedBtn.Classes.Contains("danger"));
+            Check("the other presets are not marked",
+                  lightBtn != null && !lightBtn.Classes.Contains("danger")
+                  && maxBtn != null && !maxBtn.Classes.Contains("danger"));
+
+            string summary = window.FindControl<TextBlock>("PresetSummary")?.Text ?? "";
+            Check("the click reports what it changed", summary.StartsWith("Balanced:"), summary);
+
+            Click("PresetMax");
+            Check("marking follows the newly chosen level",
+                  maxBtn.Classes.Contains("danger") && !balancedBtn.Classes.Contains("danger"));
+            Check("summary follows too",
+                  (window.FindControl<TextBlock>("PresetSummary")?.Text ?? "").Contains("freezing ON"));
+
+            // Flipping a switch by hand should drop the preset marking.
+            var freeze = window.FindControl<CheckBox>("SimpleFreeze");
+            freeze.IsChecked = false;
+            freeze.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Check("hand-editing a switch clears the preset marking",
+                  !maxBtn.Classes.Contains("danger"),
+                  "otherwise it claims Maximum while no longer being Maximum");
         }
         catch (Exception ex)
         {

@@ -703,13 +703,15 @@ public partial class MainWindow : Window
         button.Classes.Remove("primary");
         button.Classes.Remove("ghost");
         button.Classes.Remove("icon");
-        button.Classes.Add(cls);
+        button.Classes.Remove("danger");
+        if (!string.IsNullOrEmpty(cls)) button.Classes.Add(cls);
     }
 
     private void OnSimpleChanged(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
         ApplySimpleToProfile();
+        SyncPresetFromSwitches();
     }
 
     private void OnPresetLight(object sender, RoutedEventArgs e) => ApplyPreset(true, false, true, false, false);
@@ -730,10 +732,46 @@ public partial class MainWindow : Window
         finally { _loading = false; }
 
         ApplySimpleToProfile();
-        SetText("FooterProfile", freeze ? "Maximum" : fullSpeed && network ? "Balanced" : "Light touch");
-        Log.Info($"preset applied: background {(quiet ? "quieted" : "untouched")}, " +
-                 $"power {(fullSpeed ? "full speed" : "default")}, " +
-                 $"network {(network ? "prioritised" : "untouched")}, freezing {(freeze ? "on" : "off")}");
+
+        string name = freeze ? "Maximum" : fullSpeed && network ? "Balanced" : "Light touch";
+        SetText("FooterProfile", name);
+        MarkActivePreset(name);
+
+        // The switches a preset moves live in the card below it, so without this the click
+        // looks like it did nothing at all.
+        string summary = $"{name}: background {(quiet ? "quieted" : "left alone")}, " +
+                         $"CPU {(fullSpeed ? "held at full speed" : "left on your power plan")}, " +
+                         $"recording {(noRecording ? "off" : "untouched")}, " +
+                         $"network {(network ? "game first" : "untouched")}, " +
+                         $"freezing {(freeze ? "ON" : "off")}. Switches updated below.";
+        SetText("PresetSummary", summary);
+        Log.Info("preset applied - " + summary);
+    }
+
+    /// <summary>Only the chosen level is filled in, so it is obvious which one is live.</summary>
+    private void MarkActivePreset(string name)
+    {
+        Style("PresetLight", name == "Light touch" ? "danger" : "ghost");
+        Style("PresetBalanced", name == "Balanced" ? "danger" : "ghost");
+        Style("PresetMax", name == "Maximum" ? "danger" : "ghost");
+    }
+
+    /// <summary>Works out which level the current switch positions correspond to, if any.</summary>
+    private void SyncPresetFromSwitches()
+    {
+        bool quiet = Check("SimpleQuiet"), fullSpeed = Check("SimpleFullSpeed");
+        bool network = Check("SimpleNetwork"), freeze = Check("SimpleFreeze");
+        bool noRecording = Check("SimpleNoRecording");
+
+        string name =
+            quiet && fullSpeed && noRecording && network && freeze ? "Maximum"
+            : quiet && fullSpeed && noRecording && network && !freeze ? "Balanced"
+            : quiet && !fullSpeed && noRecording && !network && !freeze ? "Light touch"
+            : null;
+
+        MarkActivePreset(name ?? "");
+        if (name != null) SetText("FooterProfile", name);
+        else SetText("FooterProfile", "Custom");
     }
 
     private void ApplySimpleToProfile()
@@ -790,6 +828,8 @@ public partial class MainWindow : Window
             SetCheck("SimpleSafe", p.Safety.AntiCheatSafeMode);
         }
         finally { _loading = false; }
+
+        SyncPresetFromSwitches();
     }
 
     /// <summary>A game found by detection joins the library, ticked, so it is visible and editable.</summary>
