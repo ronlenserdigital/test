@@ -174,7 +174,7 @@
                       <TextBlock x:Name="HeroStatus" Text="Idle" FontSize="13" Foreground="#93949E" />
                     </StackPanel>
                   </StackPanel>
-                  <Button Grid.Column="1" x:Name="WatchButton" Classes="danger" Content="START  ·  MAX PERFORMANCE"
+                  <Button Grid.Column="1" x:Name="WatchButton" Classes="danger" Content="START"
                           VerticalAlignment="Center" Click="OnWatchClick" />
                 </Grid>
                 <ProgressBar x:Name="HeroProgress" Height="4" Minimum="0" Maximum="100" Value="0"
@@ -249,6 +249,17 @@
                              FontSize="13" FontWeight="Bold" Foreground="#E01F2D" LetterSpacing="1.6" />
                 </StackPanel>
               </Grid>
+            </Border>
+
+            <Border x:Name="GovernanceCard" Classes="card" IsVisible="False">
+              <StackPanel Spacing="10">
+                <TextBlock Classes="cardhead" Text="WHAT WAS ACTUALLY CHANGED" />
+                <TextBlock x:Name="GovernanceHeadline" Classes="value" FontSize="15" TextWrapping="Wrap" />
+                <TextBlock x:Name="GovernanceDetail" Classes="body" TextWrapping="Wrap" />
+                <TextBlock x:Name="GovernanceTop" Classes="body" Foreground="#7E7F8A" TextWrapping="Wrap" />
+                <TextBlock Classes="body" Foreground="#E0A45C" TextWrapping="Wrap"
+                           Text="Your process COUNT will not drop. Nothing is closed - closing Windows service hosts is how booster apps break machines. Priority is lowered instead. To see it: Task Manager > Details > right-click the headers > Select columns > Base priority. Background apps should read Low." />
+              </StackPanel>
             </Border>
 
             <Border Classes="card">

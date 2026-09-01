@@ -35,6 +35,16 @@ public sealed class Governor
     private readonly HashSet<int> _journalled = new();
 
     /// <summary>
+    /// What the last sweep actually did, so the app can answer "you say you optimised my PC,
+    /// why do I still have 300 processes" with numbers instead of adjectives.
+    /// </summary>
+    public sealed record SweepSummary(
+        int Total, int ServiceHosts, int Protected, int ThrottleOnly, int Governed,
+        int Suspended, int Capped, IReadOnlyList<(string Name, double CpuSeconds)> TopCpu);
+
+    public SweepSummary LastSweep { get; private set; }
+
+    /// <summary>
     /// Everything that does not need the game to be running: power plan, processor floor,
     /// core parking, timer resolution, MMCSS, Game DVR, network policy, and the background
     /// sweep. This is what "max performance now" means - pressing start should not wait for
@@ -171,9 +181,12 @@ public sealed class Governor
     {
         uint priority = Profile.PriorityClassFor(_profile.Background.Priority);
         int touched = 0, suspended = 0, capped = 0;
+        int total = 0, serviceHosts = 0, protectedCount = 0, throttleOnly = 0;
+        var cpuUsers = new List<(string Name, double CpuSeconds)>();
 
         foreach (var proc in Process.GetProcesses())
         {
+            total++;
             using (proc)
             {
                 if (proc.Id == Environment.ProcessId || proc.Id <= 4) continue;
@@ -183,8 +196,21 @@ public sealed class Governor
                 // Never govern a selected game, even before it is the detected one.
                 if (_profile.Game.Executables.Contains(proc.ProcessName.ToLowerInvariant())) continue;
 
+                // Count what is being skipped and why - the answer to "nothing changed".
+                try
+                {
+                    if (proc.TotalProcessorTime.TotalSeconds > 0)
+                        cpuUsers.Add((proc.ProcessName, proc.TotalProcessorTime.TotalSeconds));
+                }
+                catch { }
+
+                bool session0 = false;
+                try { session0 = proc.SessionId == 0; } catch { session0 = true; }
+                if (session0) serviceHosts++;
+
                 Tier tier = Classify(proc);
-                if (tier == Tier.Never) continue;
+                if (tier == Tier.Never) { if (!session0) protectedCount++; continue; }
+                if (tier == Tier.ThrottleOnly) throttleOnly++;
 
                 IntPtr h = OpenTarget(proc.Id, out bool limited);
                 if (h == IntPtr.Zero) continue;
@@ -242,12 +268,21 @@ public sealed class Governor
             }
         }
 
+        LastSweep = new SweepSummary(total, serviceHosts, protectedCount, throttleOnly, touched,
+            suspended, capped,
+            cpuUsers.OrderByDescending(c => c.CpuSeconds).Take(5).ToList());
+
         if (touched == 0) return;
 
         journal.Save();
         Log.Good($"background: {touched} processes re-prioritised" +
                  (capped > 0 ? $", {capped} CPU-capped" : "") +
                  (suspended > 0 ? $", {suspended} suspended" : ""));
+        Log.Info($"  of {total} processes: {serviceHosts} are Windows service hosts (session 0, " +
+                 "left alone by design), " + $"{protectedCount} are protected, {throttleOnly} are " +
+                 "launchers or capture tools that are de-prioritised but never frozen.");
+        Log.Dim("  process COUNT does not change - nothing is closed. Priority is lowered. Check " +
+                "Task Manager > Details > Base priority to see it.");
     }
 
     private Tier Classify(Process proc)

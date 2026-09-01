@@ -66,6 +66,7 @@ internal static class Program
             "PerfPing", "PerfJitter", "PerfLoss", "PerfTarget", "PerfPingGraph",
             "PerfCpuBar", "PerfCpuText", "PerfGpuBar", "PerfGpuText", "PerfRamBar", "PerfRamText",
             "PerfNet", "PerfAdapter", "RingGraph", "AddGameNote", "AddGameButton",
+            "GovernanceCard", "GovernanceHeadline", "GovernanceDetail", "GovernanceTop",
             "HeroGameName", "HeroStatus", "HeroDot", "HeroProgress", "WatchButton",
             "AntiCheatBanner", "AntiCheatText", "SafeMode",
             "StatusState", "StatusGame", "StatusCpu", "StatusTimer", "StatusJournal", "StatusPower",

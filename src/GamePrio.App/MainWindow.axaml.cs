@@ -1262,6 +1262,7 @@ public partial class MainWindow : Window
             : detection == null ? _engine.DetectedGame
             : $"{_engine.DetectedGame}  ·  {detection.Reason}");
         SetText("StatusJournal", File.Exists(Journal.Path) ? "open - changes are live" : "clean");
+        RenderGovernance();
         SetText("StatusPower", _powerPlan);
 
         SetText("FooterCpuSet", hybrid ? $"{pCores}P / {eCores}E" : "Uniform");
@@ -1269,10 +1270,10 @@ public partial class MainWindow : Window
         SetText("FooterTimer", $"{timerMs:0.###} ms");
         SetText("FooterPower", _powerPlan);
 
-        string state = _engine.GameAttached ? "APPLIED" : _engine.IsApplied ? "MAX PERF" : "IDLE";
+        string state = _engine.GameAttached ? "GOVERNING" : _engine.IsApplied ? "ARMED" : "IDLE";
         SetText("StatusState", state.ToLowerInvariant());
         SetText("StateText", elevated ? state : "NOT ELEVATED");
-        SetText("RingText", _engine.GameAttached ? "OPTIMAL" : _engine.IsApplied ? "MAX" : "STANDBY");
+        SetText("RingText", _lastFrameStats.HasFrameData ? "FRAME RATE" : "CPU LOAD");
 
         SetContent("WatchButton", _engine.IsWatching ? "Stop  ·  restore" : "START  ·  MAX PERFORMANCE");
         SetText("HeroStatus",
@@ -1299,6 +1300,37 @@ public partial class MainWindow : Window
         if (glyph != null) glyph.Stroke = new SolidColorBrush(colour);
         var pill = Ctl<Border>("StatePill");
         if (pill != null) pill.BorderBrush = new SolidColorBrush(colour);
+    }
+
+    /// <summary>
+    /// Answers "you say you optimised my PC, why do I still have 300 processes" with the
+    /// actual numbers, rather than leaving the user to assume nothing happened.
+    /// </summary>
+    private void RenderGovernance()
+    {
+        var sweep = _engine?.Governor?.LastSweep;
+        var card = Ctl<Border>("GovernanceCard");
+        if (card == null) return;
+
+        if (sweep == null || !_engine.IsApplied) { card.IsVisible = false; return; }
+        card.IsVisible = true;
+
+        int untouchable = sweep.ServiceHosts + sweep.Protected;
+        SetText("GovernanceHeadline",
+            $"{sweep.Governed} of {sweep.Total} processes are being governed right now.");
+
+        SetText("GovernanceDetail",
+            $"{sweep.ServiceHosts} are Windows service hosts running in session 0 - almost all of them " +
+            $"sit at 0% CPU and are left alone by design. {sweep.Protected} are protected: anti-cheat, " +
+            $"system-critical, and STRYKR itself. {sweep.ThrottleOnly} are launchers and capture tools, " +
+            "de-prioritised but never frozen because the game talks to them." +
+            (sweep.Suspended > 0 ? $" {sweep.Suspended} are suspended outright." : "") +
+            (sweep.Capped > 0 ? $" {sweep.Capped} are CPU-capped." : ""));
+
+        SetText("GovernanceTop", sweep.TopCpu.Count == 0
+            ? ""
+            : "Biggest CPU consumers since boot: " +
+              string.Join(", ", sweep.TopCpu.Select(t => $"{t.Name} ({t.CpuSeconds / 60:0.#} min)")));
     }
 
     private void RefreshPowerPlanAsync() => Task.Run(() =>
