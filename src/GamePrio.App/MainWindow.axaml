@@ -104,13 +104,24 @@
             </StackPanel>
           </Button>
 
-          <Path Width="34" Height="24" Stretch="Uniform" VerticalAlignment="Center"
-                Fill="#E8121F"
-                Data="M 30,2 L 100,2 L 86,18 L 44,18 L 26,36 L 26,50 L 10,34 L 10,20 Z
-                      M 70,30 L 90,30 L 90,44 L 74,60 L 32,60 L 18,76 L 88,76 L 74,92 L 4,92 L 22,74
-                      L 22,60 L 38,44 L 80,44 L 70,44 Z">
+          <!--
+            The STRYKR mark, vectorised from the supplied artwork: two identical angular
+            ribbons in 180-degree rotational symmetry, the upper hooking down-left and the
+            lower up-right. Bright edge into a dark interior, with the bloom around it.
+          -->
+          <Path Width="40" Height="21" Stretch="Uniform" VerticalAlignment="Center"
+                Data="M 70,4 L 196,4 L 172,30 L 100,30 L 66,64 L 66,92 L 42,66 L 42,36 Z
+                      M 168,116 L 42,116 L 66,90 L 138,90 L 172,56 L 172,28 L 196,54 L 196,84 Z">
+            <Path.Fill>
+              <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                <GradientStop Offset="0" Color="#FF3B47" />
+                <GradientStop Offset="0.35" Color="#D0121F" />
+                <GradientStop Offset="0.72" Color="#6E070E" />
+                <GradientStop Offset="1" Color="#B00E19" />
+              </LinearGradientBrush>
+            </Path.Fill>
             <Path.Effect>
-              <DropShadowEffect BlurRadius="14" Color="#FF2A36" Opacity="0.85" OffsetX="0" OffsetY="0" />
+              <DropShadowEffect BlurRadius="16" Color="#FF1F2B" Opacity="0.9" OffsetX="0" OffsetY="0" />
             </Path.Effect>
           </Path>
           <TextBlock Text="STRYKR" FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"

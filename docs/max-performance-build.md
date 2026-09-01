@@ -9,6 +9,19 @@ It is also fully journalled, so every change can be put back exactly.
 
 ---
 
+## The mark
+
+The STRYKR logo in the title bar and on the HUD is **vectorised from the supplied artwork,
+not the original file**. The image was shared in conversation and never reached disk, so it
+could not be embedded.
+
+It is built on the construction the artwork actually uses: two identical angular ribbons in
+180-degree rotational symmetry, the upper hooking down-left and the lower up-right, filled
+with a bright-edge-into-dark-interior gradient and a red bloom.
+
+To use the real asset instead, drop the PNG or SVG into `src/GamePrio.App/assets/` and
+replace the `<Path>` in the title bar with an `<Image>`; nothing else needs to change.
+
 ## STRYKR
 
 The UI is branded STRYKR and publishes as `strykr.exe`. The engine, the console tool and
