@@ -119,6 +119,7 @@
         <StackPanel Grid.Column="0" Orientation="Horizontal">
           <Button x:Name="TabControlBtn" Classes="tab on" Content="CONTROL" Click="OnTabControl" />
           <Button x:Name="TabSettingsBtn" Classes="tab" Content="SETTINGS" Click="OnTabSettings" />
+          <Button x:Name="TabPerfBtn" Classes="tab" Content="PC PERFORMANCE" Click="OnTabPerf" />
           <Button x:Name="TabAuditBtn" Classes="tab" Content="AUDIT" Click="OnTabAudit" />
           <Button x:Name="TabActivityBtn" Classes="tab" Content="ACTIVITY" Click="OnTabActivity" />
         </StackPanel>
@@ -506,6 +507,119 @@
                 </StackPanel>
               </Border>
             </StackPanel>
+
+            <Border Height="10" Background="Transparent" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============ PC PERFORMANCE ============ -->
+        <ScrollViewer x:Name="PanelPerf" VerticalScrollBarVisibility="Auto" IsVisible="False">
+          <StackPanel Spacing="18">
+
+            <Border Classes="card">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="6">
+                  <TextBlock Classes="cardhead" Text="LIVE" />
+                  <TextBlock x:Name="PerfState" Classes="body" Text="Not monitoring." />
+                </StackPanel>
+                <Button Grid.Column="1" x:Name="PerfButton" Classes="danger" Content="Start monitoring"
+                        VerticalAlignment="Center" Click="OnPerfToggle" />
+              </Grid>
+            </Border>
+
+            <Grid ColumnDefinitions="*,*" x:Name="PerfTop">
+              <Border Grid.Column="0" Classes="card" Margin="0,0,9,0">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="cardhead" Text="FRAME RATE" />
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock x:Name="PerfFps" Text="--" FontSize="56" FontWeight="Bold" Foreground="#FFFFFF"
+                               FontFamily="Bahnschrift, Consolas, monospace" LineHeight="60" />
+                    <TextBlock Text="FPS" FontSize="13" FontWeight="Bold" Foreground="#E01F2D"
+                               VerticalAlignment="Bottom" Margin="0,0,0,12" LetterSpacing="1.3" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="1% low" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="PerfLow" Classes="value" Text="--" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="Frame time" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PerfFrameTime" Classes="value" Text="--" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="label" Text="Stutters" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PerfStutter" Classes="value" Text="--" />
+                  </Grid>
+                  <TextBlock x:Name="PerfFpsNote" Classes="body" Foreground="#7E7F8A"
+                             Text="Frame data comes from PresentMon and needs a game running." />
+                </StackPanel>
+              </Border>
+
+              <Border Grid.Column="1" Classes="card" Margin="9,0,0,0">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="cardhead" Text="CONNECTION" />
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock x:Name="PerfPing" Text="--" FontSize="56" FontWeight="Bold" Foreground="#FFFFFF"
+                               FontFamily="Bahnschrift, Consolas, monospace" LineHeight="60" />
+                    <TextBlock Text="MS" FontSize="13" FontWeight="Bold" Foreground="#E01F2D"
+                               VerticalAlignment="Bottom" Margin="0,0,0,12" LetterSpacing="1.3" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="Jitter" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="PerfJitter" Classes="value" Text="--" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="Packet loss" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PerfLoss" Classes="value" Text="--" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="label" Text="Probing" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PerfTarget" Classes="value" Text="--" />
+                  </Grid>
+                  <Canvas x:Name="PerfPingGraph" Height="46" Background="Transparent" />
+                  <TextBlock Classes="body" Foreground="#7E7F8A"
+                             Text="This is your line's health, not your in-game ping - gameplay runs over UDP to the game's own servers, so use its netgraph for that. Jitter and loss are the parts you can actually change." />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <Border Classes="card">
+              <StackPanel Spacing="16">
+                <TextBlock Classes="cardhead" Text="SYSTEM" />
+
+                <Grid ColumnDefinitions="110,*,130" x:Name="PerfCpuRow">
+                  <TextBlock Grid.Column="0" Classes="label" Text="CPU" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" Height="10" CornerRadius="5" Background="#1A1B21" VerticalAlignment="Center">
+                    <Border x:Name="PerfCpuBar" Height="10" CornerRadius="5" Background="#E01F2D"
+                            HorizontalAlignment="Left" Width="0" />
+                  </Border>
+                  <TextBlock Grid.Column="2" x:Name="PerfCpuText" Classes="value" Text="--"
+                             HorizontalAlignment="Right" VerticalAlignment="Center"
+                             FontFamily="Bahnschrift, Consolas, monospace" />
+                </Grid>
+
+                <Grid ColumnDefinitions="110,*,130">
+                  <TextBlock Grid.Column="0" Classes="label" Text="GPU" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" Height="10" CornerRadius="5" Background="#1A1B21" VerticalAlignment="Center">
+                    <Border x:Name="PerfGpuBar" Height="10" CornerRadius="5" Background="#E01F2D"
+                            HorizontalAlignment="Left" Width="0" />
+                  </Border>
+                  <TextBlock Grid.Column="2" x:Name="PerfGpuText" Classes="value" Text="--"
+                             HorizontalAlignment="Right" VerticalAlignment="Center"
+                             FontFamily="Bahnschrift, Consolas, monospace" />
+                </Grid>
+
+                <Grid ColumnDefinitions="110,*,130">
+                  <TextBlock Grid.Column="0" Classes="label" Text="MEMORY" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" Height="10" CornerRadius="5" Background="#1A1B21" VerticalAlignment="Center">
+                    <Border x:Name="PerfRamBar" Height="10" CornerRadius="5" Background="#E01F2D"
+                            HorizontalAlignment="Left" Width="0" />
+                  </Border>
+                  <TextBlock Grid.Column="2" x:Name="PerfRamText" Classes="value" Text="--"
+                             HorizontalAlignment="Right" VerticalAlignment="Center"
+                             FontFamily="Bahnschrift, Consolas, monospace" />
+                </Grid>
+
+                <Grid ColumnDefinitions="110,*,130">
+                  <TextBlock Grid.Column="0" Classes="label" Text="NETWORK" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" x:Name="PerfNet" Classes="value" Text="--" VerticalAlignment="Center"
+                             FontFamily="Bahnschrift, Consolas, monospace" />
+                  <TextBlock Grid.Column="2" x:Name="PerfAdapter" Classes="label" Text="--"
+                             HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+              </StackPanel>
+            </Border>
 
             <Border Height="10" Background="Transparent" />
           </StackPanel>

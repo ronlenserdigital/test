@@ -66,6 +66,9 @@ public sealed class Profile
         public string PreferredInterfaceAlias { get; set; }
         /// DSCP value for a policy-based QoS rule on the game exe. 46 = Expedited Forwarding. 0 = skip.
         public int Dscp { get; set; } = 46;
+        /// <summary>Host the PERFORMANCE tab probes for latency, jitter and loss.</summary>
+        public string PingTarget { get; set; } = "1.1.1.1";
+
         public bool ThrottleBulkUploaders { get; set; } = true;
         public List<string> BulkUploaders { get; set; } = new();
         /// Hard upload cap applied to each bulk uploader for the session, in kbit/s.

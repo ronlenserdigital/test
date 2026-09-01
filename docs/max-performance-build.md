@@ -44,6 +44,38 @@ Nothing was dropped in the redesign. Every feature is reachable:
 `Export report` writes a timestamped file to your Desktop: machine, full profile, and a
 complete verify pass read back out of Windows.
 
+## The PC PERFORMANCE tab
+
+Everything the machine is doing, in one place, read from Windows directly - no vendor SDKs
+and nothing injected into the game.
+
+- **Frame rate** - FPS, frame time, 1% low and stutter rate, from the same PresentMon
+  stream the overlay uses, so running both costs one ETW session rather than two.
+- **Connection** - RTT, jitter, packet loss and a one-minute trace, with the status colour
+  always travelling alongside the number rather than instead of it.
+- **System** - CPU, GPU and memory meters plus live network throughput and the adapter
+  carrying it. GPU utilisation comes from the `\GPU Engine(*engtype_3D)\Utilization
+  Percentage` performance counters read through PDH, rather than by spawning PowerShell
+  every second; the 3D engine only, since summing every engine type double-counts copy and
+  video work.
+
+One deliberate piece of honesty on that tab: the connection panel says plainly that this is
+**your line's health, not your in-game ping**. Gameplay runs over UDP to the game's own
+servers, so only the game's netgraph knows that number. Jitter and packet loss on your own
+connection are the parts STRYKR can actually change, and they are the parts shown.
+
+The probe target defaults to `1.1.1.1` and is configurable, so you can point it at a
+specific server if you know its address.
+
+## Changing a level while a session is running
+
+Picking a level used to write the profile and stop there, so choosing Maximum mid-session
+left the power plan on whatever the previous level had set - which reads, correctly, as the
+button not working. Any change to the switches or the level now re-applies to a live
+session immediately: the journal is restored and the new profile applied over it, so the
+power plan, timer resolution and background sweep all move at once. With no session
+running, the summary line says what is armed and START applies it.
+
 ## The AUDIT tab
 
 Research into what actually moves a framerate produced an uncomfortable finding: **six of

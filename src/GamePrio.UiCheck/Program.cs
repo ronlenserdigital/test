@@ -60,8 +60,12 @@ internal static class Program
         {
             "GameList", "SearchBox", "CustomExeBox", "SelectedCount", "ExecCount",
             "TabControlBtn", "TabSettingsBtn", "TabActivityBtn",
-            "PanelControl", "PanelSettings", "PanelAudit", "PanelActivity",
-            "TabAuditBtn", "AuditButton", "AuditSummary", "AuditList",
+            "PanelControl", "PanelSettings", "PanelPerf", "PanelAudit", "PanelActivity",
+            "TabAuditBtn", "AuditButton", "AuditSummary", "AuditList", "TabPerfBtn",
+            "PerfButton", "PerfState", "PerfFps", "PerfLow", "PerfFrameTime", "PerfStutter", "PerfFpsNote",
+            "PerfPing", "PerfJitter", "PerfLoss", "PerfTarget", "PerfPingGraph",
+            "PerfCpuBar", "PerfCpuText", "PerfGpuBar", "PerfGpuText", "PerfRamBar", "PerfRamText",
+            "PerfNet", "PerfAdapter",
             "HeroGameName", "HeroStatus", "HeroDot", "HeroProgress", "WatchButton",
             "AntiCheatBanner", "AntiCheatText", "SafeMode",
             "StatusState", "StatusGame", "StatusCpu", "StatusTimer", "StatusJournal", "StatusPower",
@@ -104,8 +108,11 @@ internal static class Program
             Click("ModeSimpleBtn");
             Check("Simple panel shows", Visible("SimplePanel") && !Visible("AdvancedPanel"));
 
+            Click("TabPerfBtn");
+            Check("PC PERFORMANCE tab switches", Visible("PanelPerf") && !Visible("PanelSettings"));
+
             Click("TabAuditBtn");
-            Check("AUDIT tab switches", Visible("PanelAudit") && !Visible("PanelSettings"));
+            Check("AUDIT tab switches", Visible("PanelAudit") && !Visible("PanelPerf"));
 
             Click("TabActivityBtn");
             Check("ACTIVITY tab switches", Visible("PanelActivity") && !Visible("PanelAudit"));

@@ -23,6 +23,8 @@ public partial class MainWindow : Window
 
     private Engine _engine;
     private LiveMonitor _monitor;
+    private SystemMonitor _system;
+    private LiveStats _lastFrameStats;
     private HudWindow _hud;
     private string _profilePath;
     private string _powerPlan = "-";
@@ -127,20 +129,23 @@ public partial class MainWindow : Window
 
     private void OnTabControl(object sender, RoutedEventArgs e) => SetTab(0);
     private void OnTabSettings(object sender, RoutedEventArgs e) => SetTab(1);
-    private void OnTabAudit(object sender, RoutedEventArgs e) => SetTab(2);
-    private void OnTabActivity(object sender, RoutedEventArgs e) => SetTab(3);
+    private void OnTabPerf(object sender, RoutedEventArgs e) => SetTab(2);
+    private void OnTabAudit(object sender, RoutedEventArgs e) => SetTab(3);
+    private void OnTabActivity(object sender, RoutedEventArgs e) => SetTab(4);
 
     private void SetTab(int index)
     {
         SetVisible("PanelControl", index == 0);
         SetVisible("PanelSettings", index == 1);
-        SetVisible("PanelAudit", index == 2);
-        SetVisible("PanelActivity", index == 3);
+        SetVisible("PanelPerf", index == 2);
+        SetVisible("PanelAudit", index == 3);
+        SetVisible("PanelActivity", index == 4);
 
         SetTabState("TabControlBtn", index == 0);
         SetTabState("TabSettingsBtn", index == 1);
-        SetTabState("TabAuditBtn", index == 2);
-        SetTabState("TabActivityBtn", index == 3);
+        SetTabState("TabPerfBtn", index == 2);
+        SetTabState("TabAuditBtn", index == 3);
+        SetTabState("TabActivityBtn", index == 4);
     }
 
     private void SetTabState(string name, bool on)
@@ -451,7 +456,7 @@ public partial class MainWindow : Window
     private void OnVerifyClick(object sender, RoutedEventArgs e)
     {
         ApplyControlsToProfile();
-        SetTab(3);
+        SetTab(4);
         Task.Run(() =>
         {
             try { Verify.Run(_engine.Profile, _engine.Governor); }
@@ -467,7 +472,7 @@ public partial class MainWindow : Window
 
         var button = Ctl<Button>("BenchButton");
         if (button != null) button.IsEnabled = false;
-        SetTab(3);
+        SetTab(4);
         Log.Info("benchmark starting");
 
         Task.Run(() =>
@@ -519,7 +524,7 @@ public partial class MainWindow : Window
     private void OnExportClick(object sender, RoutedEventArgs e)
     {
         ApplyControlsToProfile();
-        SetTab(3);
+        SetTab(4);
         Task.Run(() =>
         {
             try { Report.Export(_engine.Profile, _engine.Governor); }
@@ -664,9 +669,144 @@ public partial class MainWindow : Window
                 button.Content = result.Applied
                     ? (result.NeedsReboot ? "Done - reboot needed" : "Done")
                     : finding.FixLabel;
-                if (!result.Applied) SetTab(3);
+                if (!result.Applied) SetTab(4);
             });
         });
+    }
+
+    // ------------------------------------------------------- PC performance
+
+    private void OnPerfToggle(object sender, RoutedEventArgs e)
+    {
+        if (_system != null) { StopPerf(); return; }
+
+        ApplyControlsToProfile();
+
+        _system = new SystemMonitor();
+        _system.Updated += stats => Dispatcher.UIThread.Post(() => RenderSystem(stats));
+        _system.Start(_engine?.Profile.Network.PingTarget ?? "1.1.1.1");
+
+        // Frame data rides on the same PresentMon stream the overlay uses.
+        string target = _engine?.Profile.Game.Executables.FirstOrDefault();
+        if (target != null)
+        {
+            _monitor ??= new LiveMonitor();
+            if (!_monitor.IsRunning)
+            {
+                _monitor.Updated += OnFrameStats;
+                _monitor.Start(_engine.Profile, target);
+            }
+        }
+
+        SetContent("PerfButton", "Stop monitoring");
+        SetText("PerfState", target == null
+            ? "Monitoring the machine and the connection. Tick a game for frame rate too."
+            : $"Monitoring. Frame data follows {target}.exe once it is running.");
+    }
+
+    private void StopPerf()
+    {
+        _system?.Dispose();
+        _system = null;
+
+        // Leave the stream alone if the overlay is still using it.
+        if (_hud == null && _monitor != null)
+        {
+            _monitor.Updated -= OnFrameStats;
+            _monitor.Stop();
+        }
+
+        SetContent("PerfButton", "Start monitoring");
+        SetText("PerfState", "Not monitoring.");
+    }
+
+    private void OnFrameStats(LiveStats stats)
+    {
+        _lastFrameStats = stats;
+        Dispatcher.UIThread.Post(RenderFrames);
+    }
+
+    private void RenderFrames()
+    {
+        var stats = _lastFrameStats;
+        SetText("PerfFps", stats.HasFrameData ? stats.Fps.ToString("0") : "--");
+        SetText("PerfFrameTime", stats.HasFrameData ? $"{stats.FrameTimeMs:0.0} ms" : "--");
+        SetText("PerfLow", stats.OnePercentLowFps > 0 ? $"{stats.OnePercentLowFps:0} fps" : "collecting...");
+        SetText("PerfStutter", stats.OnePercentLowFps > 0 ? $"{stats.StuttersLastMinute}/min" : "--");
+        if (!string.IsNullOrEmpty(stats.Note)) SetText("PerfFpsNote", stats.Note);
+    }
+
+    private void RenderSystem(SystemStats stats)
+    {
+        Meter("PerfCpuBar", "PerfCpuText", stats.CpuPercent, $"{stats.CpuPercent:0}%");
+        Meter("PerfGpuBar", "PerfGpuText", stats.GpuPercent < 0 ? 0 : stats.GpuPercent,
+              stats.GpuPercent < 0 ? "unavailable" : $"{stats.GpuPercent:0}%");
+        Meter("PerfRamBar", "PerfRamText", stats.RamPercent,
+              $"{stats.RamUsedGb:0.0} / {stats.RamTotalGb:0} GB");
+
+        SetText("PerfNet", $"{stats.DownMbps:0.0} Mbps down     {stats.UpMbps:0.0} Mbps up");
+        SetText("PerfAdapter", stats.Adapter);
+
+        bool havePing = stats.PingHistory.Count > 0;
+        SetText("PerfPing", havePing ? stats.PingMs.ToString("0") : "--");
+        SetText("PerfJitter", havePing ? $"{stats.JitterMs:0.0} ms" : "--");
+        SetText("PerfLoss", havePing || stats.LossPercent > 0 ? $"{stats.LossPercent:0.#}%" : "--");
+        SetText("PerfTarget", stats.PingTarget);
+
+        // Status colour always travels with the number, never instead of it.
+        Tint("PerfPing", stats.PingMs <= 0 ? "#EDEDF2" : stats.PingMs < 40 ? "#5FBF8F"
+                        : stats.PingMs < 90 ? "#E0A45C" : "#FF4A54");
+        Tint("PerfLoss", stats.LossPercent < 1 ? "#EDEDF2" : stats.LossPercent < 5 ? "#E0A45C" : "#FF4A54");
+        Tint("PerfJitter", stats.JitterMs < 5 ? "#EDEDF2" : stats.JitterMs < 15 ? "#E0A45C" : "#FF4A54");
+
+        DrawPingGraph(stats.PingHistory);
+        if (_monitor == null || !_monitor.IsRunning) RenderFrames();
+    }
+
+    private void Meter(string barName, string textName, double percent, string label)
+    {
+        var bar = Ctl<Border>(barName);
+        if (bar?.Parent is Border track && track.Bounds.Width > 0)
+            bar.Width = Math.Clamp(percent, 0, 100) / 100.0 * track.Bounds.Width;
+
+        SetText(textName, label);
+        Tint(textName, percent < 70 ? "#EDEDF2" : percent < 90 ? "#E0A45C" : "#FF4A54");
+    }
+
+    /// <summary>One series, so no legend: a thin recessive trace of the last minute of RTT.</summary>
+    private void DrawPingGraph(IReadOnlyList<double> history)
+    {
+        var canvas = Ctl<Canvas>("PerfPingGraph");
+        if (canvas == null) return;
+
+        canvas.Children.Clear();
+        if (history.Count < 2 || canvas.Bounds.Width <= 0) return;
+
+        double max = Math.Max(history.Max(), 1);
+        double width = canvas.Bounds.Width;
+        double height = canvas.Bounds.Height;
+
+        var points = new Avalonia.Points();
+        for (int i = 0; i < history.Count; i++)
+        {
+            double x = width * i / Math.Max(history.Count - 1, 1);
+            double y = height - history[i] / max * (height - 4) - 2;
+            points.Add(new Avalonia.Point(x, y));
+        }
+
+        canvas.Children.Add(new Polyline
+        {
+            Points = points,
+            Stroke = new SolidColorBrush(Color.Parse("#E01F2D")),
+            StrokeThickness = 2,
+            StrokeJoin = PenLineJoin.Round
+        });
+    }
+
+    private void Tint(string name, string colour)
+    {
+        var block = Ctl<TextBlock>(name);
+        if (block != null) block.Foreground = new SolidColorBrush(Color.Parse(colour));
     }
 
     private void OnClearLog(object sender, RoutedEventArgs e) => SetText("LogBox", "");
@@ -675,6 +815,7 @@ public partial class MainWindow : Window
     {
         // Never leave the machine governed because a window was closed.
         try { _hud?.Close(); } catch { }
+        try { _system?.Dispose(); } catch { }
         try { _monitor?.Dispose(); } catch { }
         try { _engine.Dispose(); } catch { }
     }
@@ -712,6 +853,7 @@ public partial class MainWindow : Window
         if (_loading) return;
         ApplySimpleToProfile();
         SyncPresetFromSwitches();
+        ReapplyIfLive("setting changed");
     }
 
     private void OnPresetLight(object sender, RoutedEventArgs e) => ApplyPreset(true, false, true, false, false);
@@ -746,6 +888,25 @@ public partial class MainWindow : Window
                          $"freezing {(freeze ? "ON" : "off")}. Switches updated below.";
         SetText("PresetSummary", summary);
         Log.Info("preset applied - " + summary);
+        ReapplyIfLive($"level set to {name}");
+    }
+
+    /// <summary>
+    /// A profile change while a session is running has to reach the machine now. Otherwise
+    /// picking Maximum leaves the power plan on whatever the last level set, which reads -
+    /// correctly - as the button not working.
+    /// </summary>
+    private void ReapplyIfLive(string reason)
+    {
+        if (_engine == null || !_engine.IsApplied) return;
+
+        Log.Info($"{reason} - re-applying to the running session");
+        Task.Run(() =>
+        {
+            _engine.RestoreNow();
+            _engine.ApplyNow();
+            RefreshPowerPlanAsync();
+        });
     }
 
     /// <summary>Only the chosen level is filled in, so it is obvious which one is live.</summary>
