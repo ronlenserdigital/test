@@ -9,24 +9,14 @@
         ExtendClientAreaChromeHints="PreferSystemChrome"
         ExtendClientAreaTitleBarHeightHint="-1">
 
-  <Grid ColumnDefinitions="435,*">
+  <Grid ColumnDefinitions="Auto,*">
 
-    <!-- sidebar -->
-    <Border Grid.Column="0" Background="#0C0C0F" BorderBrush="#1A1B21" BorderThickness="0,0,1,0">
+    <!-- game library: hidden until the controller button asks for it -->
+    <Border Grid.Column="0" x:Name="LibraryPanel" Width="435" IsVisible="False"
+            Background="#0C0C0F" BorderBrush="#1A1B21" BorderThickness="0,0,1,0">
       <DockPanel LastChildFill="True" Margin="28,0,28,24">
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="14" Margin="0,46,0,32">
-          <Border Width="42" Height="42" CornerRadius="9" BorderThickness="1" BorderBrush="#E01F2D"
-                  Background="#17090C" BoxShadow="0 0 18 0 #55E01F2D">
-            <Path Data="M 26,10 L 13,10 L 13,17 L 24,17 L 24,26 L 11,26 M 11,10 L 11,17"
-                  Stroke="#FF3B47" StrokeThickness="3.2" StrokeLineCap="Square"
-                  HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
-          <TextBlock Text="STRYKR" FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
-                     FontSize="31" FontWeight="Bold" Foreground="#FFFFFF" LetterSpacing="1"
-                     VerticalAlignment="Center" />
-          <TextBlock Text="1.0" FontSize="13" Foreground="#E01F2D" VerticalAlignment="Center" Margin="0,10,0,0" />
-        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Classes="eyebrow" Text="SELECT A GAME" Margin="0,46,0,18" />
 
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,26">
           <Border Grid.Column="0" Background="#0C0D11" BorderBrush="#22232B" BorderThickness="1" CornerRadius="8">
@@ -89,10 +79,41 @@
     </Border>
 
     <!-- main -->
-    <Grid Grid.Column="1" RowDefinitions="46,Auto,*,Auto">
+    <Grid Grid.Column="1" RowDefinitions="56,Auto,*,Auto">
 
       <!-- draggable strip; system min/max/close sit at its right -->
-      <Border Grid.Row="0" Background="Transparent" PointerPressed="OnTitleBarPressed" />
+      <Grid Grid.Row="0">
+        <Border Background="Transparent" PointerPressed="OnTitleBarPressed" />
+        <StackPanel Orientation="Horizontal" Spacing="13" Margin="22,0,0,0"
+                    HorizontalAlignment="Left" VerticalAlignment="Center">
+
+          <Button x:Name="LibraryToggle" Classes="icon" Padding="10,7" Click="OnLibraryToggle"
+                  ToolTip.Tip="Game library - pick a game, or leave it to auto-detect">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Width="24" Height="17" Stretch="Uniform" Stroke="#C9CAD2" StrokeThickness="1.5"
+                    Data="M 6,9 L 16,9 C 19,9 20.6,11 21,13.6 L 21.7,18.4 C 22,20.4 20.4,21.6 19,20.7
+                          L 15.6,18.5 L 6.4,18.5 L 3,20.7 C 1.6,21.6 0,20.4 0.3,18.4 L 1,13.6
+                          C 1.4,11 3,9 6,9 Z
+                          M 4.6,12.6 L 7.6,12.6 M 6.1,11.1 L 6.1,14.1
+                          M 14,12.4 a 1,1 0 1,0 2,0 a 1,1 0 1,0 -2,0
+                          M 16.6,14.6 a 1,1 0 1,0 2,0 a 1,1 0 1,0 -2,0" />
+              <TextBlock x:Name="LibraryToggleText" Text="0" FontSize="11" FontWeight="Bold"
+                         Foreground="#E01F2D" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+
+          <Border Width="30" Height="30" CornerRadius="7" BorderThickness="1" BorderBrush="#E01F2D"
+                  Background="#17090C" BoxShadow="0 0 14 0 #55E01F2D">
+            <Path Data="M 26,10 L 13,10 L 13,17 L 24,17 L 24,26 L 11,26 M 11,10 L 11,17"
+                  Stroke="#FF3B47" StrokeThickness="3.4" StrokeLineCap="Square" Stretch="Uniform"
+                  Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBlock Text="STRYKR" FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
+                     FontSize="20" FontWeight="Bold" Foreground="#FFFFFF" LetterSpacing="1"
+                     VerticalAlignment="Center" />
+          <TextBlock Text="1.0" FontSize="11" Foreground="#E01F2D" VerticalAlignment="Center" Margin="0,6,0,0" />
+        </StackPanel>
+      </Grid>
 
       <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="36,0,36,0">
         <StackPanel Grid.Column="0" Orientation="Horizontal">

@@ -73,7 +73,7 @@ internal static class Program
             "BackgroundPriority", "BgEco", "BgECore", "BgSuspend", "BgCpuCap",
             "SysPower", "SysParking", "SysTimer", "SysMmcss", "SysGameDvr",
             "NetAdapter", "NetDscp", "NetThrottle",
-            "LogBox", "LogPathText",
+            "LogBox", "LogPathText", "LibraryPanel", "LibraryToggle", "LibraryToggleText", "AutoDetect",
             "FooterProfile", "FooterCpuSet", "FooterCpus", "FooterTimer", "FooterPower", "ExportButton"
         };
         var missing = required.Where(n => window.FindControl<Control>(n) == null).ToList();
@@ -113,6 +113,15 @@ internal static class Program
 
             var tab = window.FindControl<Button>("TabControlBtn");
             Check("active tab carries the underline class", tab != null && tab.Classes.Contains("on"));
+
+            Check("library starts hidden", !Visible("LibraryPanel"));
+            Click("LibraryToggle");
+            Check("controller button opens the library", Visible("LibraryPanel"));
+            var toggle = window.FindControl<Button>("LibraryToggle");
+            Check("open state is styled", toggle != null && toggle.Classes.Contains("primary"));
+            Click("LibraryToggle");
+            Check("controller button closes it again", !Visible("LibraryPanel"));
+            Check("closed state is styled", toggle != null && toggle.Classes.Contains("icon"));
 
             // A preset must not throw even with no engine behind it.
             Click("ModeSimpleBtn");

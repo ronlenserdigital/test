@@ -10,6 +10,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace GamePrio.App;
 
@@ -94,7 +95,32 @@ public partial class MainWindow : Window
 
     private void OnTitleBarPressed(object sender, PointerPressedEventArgs e)
     {
+        // The strip carries the library button and the wordmark; a press on a button must
+        // press it, not start dragging the window.
+        if (e.Source is Visual visual && visual.GetSelfAndVisualAncestors().OfType<Button>().Any()) return;
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e);
+    }
+
+    /// <summary>The library is closed by default: with auto-detect on, most sessions never need it.</summary>
+    private void OnLibraryToggle(object sender, RoutedEventArgs e)
+    {
+        var panel = Ctl<Border>("LibraryPanel");
+        if (panel == null) return;
+
+        panel.IsVisible = !panel.IsVisible;
+        Style("LibraryToggle", panel.IsVisible ? "primary" : "icon");
+        UpdateLibraryBadge();
+    }
+
+    private void UpdateLibraryBadge()
+    {
+        int titles = _gameChecks.Count(kv => kv.Value.IsChecked == true)
+                     + _customRows.Count(c => c.Box.IsChecked == true);
+        SetText("LibraryToggleText", titles == 0 ? "AUTO" : titles.ToString());
+
+        var text = Ctl<TextBlock>("LibraryToggleText");
+        if (text != null)
+            text.Foreground = new SolidColorBrush(Color.Parse(titles == 0 ? "#7E7F8A" : "#E01F2D"));
     }
 
     // ------------------------------------------------------------- tabs
@@ -371,6 +397,7 @@ public partial class MainWindow : Window
         var executables = SelectedExecutables();
 
         SetText("SelectedCount", $"{titles} selected");
+        UpdateLibraryBadge();
         SetText("ExecCount", executables.Count == 1 ? "1 executable" : $"{executables.Count} executables");
 
         var kernel = selected.Where(g => g.AntiCheat == AntiCheat.Kernel).ToList();
@@ -530,6 +557,7 @@ public partial class MainWindow : Window
         if (button == null) return;
         button.Classes.Remove("primary");
         button.Classes.Remove("ghost");
+        button.Classes.Remove("icon");
         button.Classes.Add(cls);
     }
 

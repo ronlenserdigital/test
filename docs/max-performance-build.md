@@ -44,6 +44,17 @@ Nothing was dropped in the redesign. Every feature is reachable:
 `Export report` writes a timestamped file to your Desktop: machine, full profile, and a
 complete verify pass read back out of Windows.
 
+## The game library is hidden by default
+
+With auto-detect on, most sessions never need to touch the library, so it no longer takes
+435px of the window permanently. A controller button in the title bar opens and closes it,
+and the badge beside that button says what is armed: **AUTO** when nothing is ticked and
+detection is doing the work, or the number of titles you picked.
+
+The STRYKR wordmark moved out of the library and into the title bar with it - it could not
+live in a panel that is usually closed. The title strip still drags the window, but a press
+that lands on a button presses the button instead of starting a drag.
+
 ## Auto-detect
 
 On by default, toggled beside GAME LIBRARY. You do not have to tick anything.
