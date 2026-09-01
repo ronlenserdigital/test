@@ -1,8 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="GamePrio.App.MainWindow"
-        Title="STRYKR" Width="1536" Height="1024"
-        MinWidth="1180" MinHeight="760"
+        Title="STRYKR" Width="1280" Height="850"
+        MinWidth="1060" MinHeight="700"
         WindowStartupLocation="CenterScreen"
         Background="#0A0A0C"
         ExtendClientAreaToDecorationsHint="True"
@@ -12,11 +12,11 @@
   <Grid ColumnDefinitions="Auto,*">
 
     <!-- game library: hidden until the controller button asks for it -->
-    <Border Grid.Column="0" x:Name="LibraryPanel" Width="435" IsVisible="False"
+    <Border Grid.Column="0" x:Name="LibraryPanel" Width="330" IsVisible="True"
             Background="#0C0C0F" BorderBrush="#1A1B21" BorderThickness="0,0,1,0">
-      <DockPanel LastChildFill="True" Margin="28,0,28,24">
+      <DockPanel LastChildFill="True" Margin="20,0,20,18">
 
-        <TextBlock DockPanel.Dock="Top" Classes="eyebrow" Text="SELECT A GAME" Margin="0,46,0,18" />
+        <TextBlock DockPanel.Dock="Top" Classes="eyebrow" Text="SELECT A GAME" Margin="0,18,0,12" />
 
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,26">
           <Border Grid.Column="0" Background="#0C0D11" BorderBrush="#22232B" BorderThickness="1" CornerRadius="8">
@@ -59,10 +59,12 @@
         <Border DockPanel.Dock="Bottom" Classes="panel" Margin="0,16,0,0">
           <StackPanel Spacing="10">
             <TextBlock Classes="eyebrow" Text="ADD A GAME" />
+            <TextBlock x:Name="AddGameNote" Classes="label" TextWrapping="Wrap" FontSize="11"
+                       Text="Start the game first - it is only added once STRYKR can see it running." />
             <Grid ColumnDefinitions="*,Auto">
-              <TextBox Grid.Column="0" x:Name="CustomExeBox" Watermark="Game.exe" />
-              <Button Grid.Column="1" Classes="primary" Content="ADD" Margin="10,0,0,0"
-                      Padding="22,9" Click="OnAddCustom" />
+              <TextBox Grid.Column="0" x:Name="CustomExeBox" Watermark="Game.exe (must be running)" />
+              <Button Grid.Column="1" x:Name="AddGameButton" Classes="primary" Content="ADD" Margin="10,0,0,0"
+                      Padding="18,8" Click="OnAddCustom" />
             </Grid>
           </StackPanel>
         </Border>
@@ -79,7 +81,7 @@
     </Border>
 
     <!-- main -->
-    <Grid Grid.Column="1" RowDefinitions="56,Auto,*,Auto">
+    <Grid Grid.Column="1" RowDefinitions="46,Auto,*,Auto">
 
       <!-- draggable strip; system min/max/close sit at its right -->
       <Grid Grid.Row="0">
@@ -102,20 +104,23 @@
             </StackPanel>
           </Button>
 
-          <Border Width="30" Height="30" CornerRadius="7" BorderThickness="1" BorderBrush="#E01F2D"
-                  Background="#17090C" BoxShadow="0 0 14 0 #55E01F2D">
-            <Path Data="M 26,10 L 13,10 L 13,17 L 24,17 L 24,26 L 11,26 M 11,10 L 11,17"
-                  Stroke="#FF3B47" StrokeThickness="3.4" StrokeLineCap="Square" Stretch="Uniform"
-                  Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
+          <Path Width="34" Height="24" Stretch="Uniform" VerticalAlignment="Center"
+                Fill="#E8121F"
+                Data="M 30,2 L 100,2 L 86,18 L 44,18 L 26,36 L 26,50 L 10,34 L 10,20 Z
+                      M 70,30 L 90,30 L 90,44 L 74,60 L 32,60 L 18,76 L 88,76 L 74,92 L 4,92 L 22,74
+                      L 22,60 L 38,44 L 80,44 L 70,44 Z">
+            <Path.Effect>
+              <DropShadowEffect BlurRadius="14" Color="#FF2A36" Opacity="0.85" OffsetX="0" OffsetY="0" />
+            </Path.Effect>
+          </Path>
           <TextBlock Text="STRYKR" FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
-                     FontSize="20" FontWeight="Bold" Foreground="#FFFFFF" LetterSpacing="1"
+                     FontSize="19" FontWeight="Bold" Foreground="#FFFFFF" LetterSpacing="1.5"
                      VerticalAlignment="Center" />
           <TextBlock Text="1.0" FontSize="11" Foreground="#E01F2D" VerticalAlignment="Center" Margin="0,6,0,0" />
         </StackPanel>
       </Grid>
 
-      <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="36,0,36,0">
+      <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="24,0,24,0">
         <StackPanel Grid.Column="0" Orientation="Horizontal">
           <Button x:Name="TabControlBtn" Classes="tab on" Content="CONTROL" Click="OnTabControl" />
           <Button x:Name="TabSettingsBtn" Classes="tab" Content="SETTINGS" Click="OnTabSettings" />
@@ -140,19 +145,19 @@
       <Border Grid.Row="1" Height="1" Background="#1A1B21" VerticalAlignment="Bottom" />
 
       <!-- content -->
-      <Grid Grid.Row="2" Margin="36,26,36,0">
+      <Grid Grid.Row="2" Margin="24,18,24,0">
 
         <!-- ============ CONTROL ============ -->
         <ScrollViewer x:Name="PanelControl" VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="18">
+          <StackPanel Spacing="13">
 
-            <Border Classes="card" Padding="30,26">
-              <StackPanel Spacing="18">
+            <Border Classes="card" Padding="22,18">
+              <StackPanel Spacing="13">
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="8">
                     <TextBlock x:Name="HeroGameName" Text="NO GAME SELECTED"
                                FontFamily="Bahnschrift, Segoe UI Variable Display, Inter, sans-serif"
-                               FontSize="34" FontWeight="Bold" Foreground="#FFFFFF" LetterSpacing="0.5" />
+                               FontSize="27" FontWeight="Bold" Foreground="#FFFFFF" LetterSpacing="0.5" />
                     <StackPanel Orientation="Horizontal" Spacing="9">
                       <Ellipse x:Name="HeroDot" Width="8" Height="8" Fill="#4A4B54" VerticalAlignment="Center" />
                       <TextBlock x:Name="HeroStatus" Text="Idle" FontSize="13" Foreground="#93949E" />
@@ -190,20 +195,20 @@
                   </Grid>
 
                   <Grid ColumnDefinitions="330,*" RowDefinitions="Auto,Auto,Auto" >
-                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,0,20">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,0,13">
                       <TextBlock Classes="label" Text="Profile state" />
                       <TextBlock x:Name="StatusState" Classes="value" Foreground="#E01F2D" Text="idle" />
                     </StackPanel>
-                    <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="0,0,0,20">
+                    <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="0,0,0,13">
                       <TextBlock Classes="label" Text="Timer resolution" />
                       <TextBlock x:Name="StatusTimer" Classes="value" Text="-" />
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,0,0,20">
+                    <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,0,0,13">
                       <TextBlock Classes="label" Text="Detected game" />
                       <TextBlock x:Name="StatusGame" Classes="value" Text="none" />
                     </StackPanel>
-                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4" Margin="0,0,0,20">
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4" Margin="0,0,0,13">
                       <TextBlock Classes="label" Text="Journal" />
                       <TextBlock x:Name="StatusJournal" Classes="value" Text="clean" />
                     </StackPanel>
@@ -220,12 +225,12 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="30,0,10,0">
-                  <Border Width="150" Height="150" CornerRadius="75" BorderThickness="2"
+                  <Border Width="122" Height="122" CornerRadius="61" BorderThickness="2"
                           BorderBrush="#E01F2D" BoxShadow="0 0 34 0 #4DE01F2D">
-                    <Border Width="120" Height="120" CornerRadius="60" BorderThickness="1" BorderBrush="#3A1218">
-                      <Path Data="M 2,16 L 9,16 L 13,6 L 19,26 L 23,16 L 30,16"
-                            Stroke="#FF3B47" StrokeThickness="2.2" Stretch="Uniform"
-                            Width="66" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Border Width="98" Height="98" CornerRadius="49" BorderThickness="1" BorderBrush="#3A1218"
+                            ClipToBounds="True">
+                      <Canvas x:Name="RingGraph" Width="86" Height="46" Background="Transparent"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                   </Border>
                   <TextBlock x:Name="RingText" Text="STANDBY" HorizontalAlignment="Center" Margin="0,16,0,0"
@@ -236,7 +241,7 @@
             </Border>
 
             <Border Classes="card">
-              <StackPanel Spacing="18">
+              <StackPanel Spacing="13">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                   <Path Data="M 8,1 A 7,7 0 1 1 7.99,1 M 8,5 L 8,8 L 10,10" Stroke="#E01F2D" StrokeThickness="1.6"
                         Width="16" Height="18" VerticalAlignment="Center" />
@@ -270,7 +275,7 @@
             </Border>
 
             <Border Classes="card">
-              <StackPanel Spacing="18">
+              <StackPanel Spacing="13">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                   <Path Data="M 2,14 L 2,8 M 7,14 L 7,3 M 12,14 L 12,10 M 17,14 L 17,6" Stroke="#E01F2D"
                         StrokeThickness="1.8" Width="18" Height="17" VerticalAlignment="Center" />
@@ -302,7 +307,7 @@
 
         <!-- ============ SETTINGS ============ -->
         <ScrollViewer x:Name="PanelSettings" VerticalScrollBarVisibility="Auto" IsVisible="False">
-          <StackPanel Spacing="18">
+          <StackPanel Spacing="13">
 
             <Grid ColumnDefinitions="Auto,*,Auto">
               <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
@@ -331,7 +336,7 @@
               </Border>
 
               <Border Classes="card">
-                <StackPanel Spacing="18">
+                <StackPanel Spacing="13">
                   <TextBlock Classes="cardhead" Text="WHAT IT DOES WHILE YOU PLAY" />
 
                   <StackPanel Spacing="4">
@@ -384,7 +389,7 @@
             <StackPanel x:Name="AdvancedPanel" Spacing="18" IsVisible="False">
 
               <Border Classes="card">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="10">
                   <TextBlock Classes="cardhead" Text="TARGET PROCESS" />
                   <StackPanel Orientation="Horizontal" Spacing="12">
                     <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="140" />
@@ -420,7 +425,7 @@
               </Border>
 
               <Border Classes="card">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="10">
                   <TextBlock Classes="cardhead" Text="EVERY OTHER PROCESS" />
                   <StackPanel Orientation="Horizontal" Spacing="12">
                     <TextBlock Classes="label" Text="Priority class" VerticalAlignment="Center" Width="140" />
@@ -451,7 +456,7 @@
               </Border>
 
               <Border Classes="card">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="10">
                   <TextBlock Classes="cardhead" Text="MACHINE STATE" />
                   <CheckBox x:Name="SysPower" Content="Ultimate Performance power scheme" />
                   <TextBlock Classes="body"
@@ -473,7 +478,7 @@
               </Border>
 
               <Border Classes="card">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="10">
                   <TextBlock Classes="cardhead" Text="NETWORK" />
                   <StackPanel Orientation="Horizontal" Spacing="12">
                     <TextBlock Classes="label" Text="Preferred adapter" VerticalAlignment="Center" Width="140" />
@@ -496,7 +501,7 @@
               </Border>
 
               <Border Classes="card">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="10">
                   <TextBlock Classes="cardhead" Text="SAFETY TIERS" />
                   <TextBlock Classes="body"
                              Text="NeverTouch - anti-cheat (EAC, BattlEye, Vanguard, ACE, GameGuard), csrss, wininit, lsass, services, dwm, audiodg, Defender, and anything in session 0. Not opened, not modified, at any aggression level." />
@@ -514,7 +519,7 @@
 
         <!-- ============ PC PERFORMANCE ============ -->
         <ScrollViewer x:Name="PanelPerf" VerticalScrollBarVisibility="Auto" IsVisible="False">
-          <StackPanel Spacing="18">
+          <StackPanel Spacing="13">
 
             <Border Classes="card">
               <Grid ColumnDefinitions="*,Auto">
@@ -631,7 +636,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0" Spacing="8">
                 <TextBlock Classes="cardhead" Text="SYSTEM AUDIT" />
-                <TextBlock Classes="body" MaxWidth="760"
+                <TextBlock Classes="body" MaxWidth="620" HorizontalAlignment="Left" TextAlignment="Left"
                            Text="Most of the performance worth having is not a Windows tweak. It is RAM left at JEDEC speed, a 144 Hz monitor running at 60, a thermal limit, or a bad driver and Windows build pairing - things STRYKR cannot flip but can absolutely find. Worst first." />
                 <TextBlock x:Name="AuditSummary" Classes="body" Foreground="#7E7F8A" Text="Not run yet." />
               </StackPanel>
@@ -660,7 +665,7 @@
 
       <!-- footer -->
       <Border Grid.Row="3" Background="#0C0C0F" BorderBrush="#1A1B21" BorderThickness="0,1,0,0"
-              Padding="36,18" Margin="0,26,0,0">
+              Padding="24,12" Margin="0,18,0,0">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="46">
             <StackPanel Spacing="5">

@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private LiveMonitor _monitor;
     private SystemMonitor _system;
     private LiveStats _lastFrameStats;
+    private readonly List<double> _ringHistory = new();
     private HudWindow _hud;
     private string _profilePath;
     private string _powerPlan = "-";
@@ -67,6 +68,7 @@ public partial class MainWindow : Window
         });
 
         Step("read status", RefreshStatus);
+        Step("start telemetry", StartSystemMonitor);
         Step("read power plan", RefreshPowerPlanAsync);
 
         Log.Info("STRYKR ready");
@@ -196,7 +198,7 @@ public partial class MainWindow : Window
                 var box = new CheckBox { Tag = game, VerticalAlignment = VerticalAlignment.Center };
                 box.IsCheckedChanged += OnGameToggled;
 
-                var row = BuildRow(box, Initials(game.Name), TileColour(game.Name), game.Name);
+                var row = BuildRow(box, Initials(game.Name), TileColour(game.Name), game.Name, game.Primary);
                 ToolTip.SetTip(row, $"{game.Primary}.exe   -   anti-cheat: {game.AntiCheatName}");
 
                 _gameChecks[game] = box;
@@ -206,25 +208,31 @@ public partial class MainWindow : Window
         }
     }
 
-    private Border BuildRow(CheckBox box, string initials, Color colour, string label)
+    private Border BuildRow(CheckBox box, string initials, Color colour, string label, string executable = null)
     {
+        // A game's true logo is the icon in its own executable - read from the copy already
+        // installed here rather than shipping publishers' artwork, and cached once seen.
+        var icon = executable == null ? null : GameIcons.For(executable);
+
         var tile = new Border
         {
-            Width = 26,
-            Height = 26,
-            CornerRadius = new CornerRadius(6),
-            Background = new SolidColorBrush(colour, 0.22),
-            BorderBrush = new SolidColorBrush(colour, 0.55),
+            Width = 24,
+            Height = 24,
+            CornerRadius = new CornerRadius(5),
+            Background = icon != null ? Brushes.Transparent : new SolidColorBrush(colour, 0.22),
+            BorderBrush = icon != null ? Brushes.Transparent : new SolidColorBrush(colour, 0.55),
             BorderThickness = new Thickness(1),
-            Child = new TextBlock
-            {
-                Text = initials,
-                FontSize = 10,
-                FontWeight = FontWeight.Bold,
-                Foreground = new SolidColorBrush(colour),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            }
+            Child = icon != null
+                ? new Image { Source = icon, Width = 22, Height = 22 }
+                : new TextBlock
+                {
+                    Text = initials,
+                    FontSize = 9,
+                    FontWeight = FontWeight.Bold,
+                    Foreground = new SolidColorBrush(colour),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
         };
 
         var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
@@ -233,7 +241,7 @@ public partial class MainWindow : Window
         content.Children.Add(new TextBlock
         {
             Text = label,
-            FontSize = 13.5,
+            FontSize = 12.5,
             Foreground = new SolidColorBrush(Color.Parse("#C9CAD2")),
             VerticalAlignment = VerticalAlignment.Center
         });
@@ -363,8 +371,25 @@ public partial class MainWindow : Window
         if (exe.Length == 0) return;
         if (exe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) exe = exe[..^4];
 
+        // Typing a name that is not running would add a row that can never match anything,
+        // and would silently never trigger. Refuse it and say why.
+        var running = System.Diagnostics.Process.GetProcessesByName(exe);
+        foreach (var p in running) p.Dispose();
+
+        if (running.Length == 0)
+        {
+            SetText("AddGameNote", $"'{exe}.exe' is not running. Start the game, then add it - " +
+                                   "that way STRYKR can confirm the name and read its icon.");
+            Tint("AddGameNote", "#FF6069");
+            Log.Warn($"not added: no running process named {exe}.exe");
+            return;
+        }
+
+        GameIcons.Capture(exe);
         AddCustomRow(exe, true);
         SetText("CustomExeBox", "");
+        SetText("AddGameNote", $"Added {exe}.exe - found running, icon captured.");
+        Tint("AddGameNote", "#5FBF8F");
         RefreshSelection();
         RefreshStatus();
     }
@@ -380,7 +405,7 @@ public partial class MainWindow : Window
         var box = new CheckBox { IsChecked = isChecked, VerticalAlignment = VerticalAlignment.Center };
         box.IsCheckedChanged += OnGameToggled;
 
-        var row = BuildRow(box, Initials(exe), TileColour(exe), exe + ".exe");
+        var row = BuildRow(box, Initials(exe), TileColour(exe), exe + ".exe", exe);
         PaintRow(row, isChecked);
         list.Children.Insert(0, row);
         _customRows.Add((exe, box, row));
@@ -676,15 +701,20 @@ public partial class MainWindow : Window
 
     // ------------------------------------------------------- PC performance
 
-    private void OnPerfToggle(object sender, RoutedEventArgs e)
+    private void StartSystemMonitor()
     {
-        if (_system != null) { StopPerf(); return; }
-
-        ApplyControlsToProfile();
-
+        if (_system != null) return;
         _system = new SystemMonitor();
         _system.Updated += stats => Dispatcher.UIThread.Post(() => RenderSystem(stats));
         _system.Start(_engine?.Profile.Network.PingTarget ?? "1.1.1.1");
+    }
+
+    private void OnPerfToggle(object sender, RoutedEventArgs e)
+    {
+        if (_monitor is { IsRunning: true } && _hud == null) { StopPerf(); return; }
+
+        ApplyControlsToProfile();
+        StartSystemMonitor();
 
         // Frame data rides on the same PresentMon stream the overlay uses.
         string target = _engine?.Profile.Game.Executables.FirstOrDefault();
@@ -698,7 +728,7 @@ public partial class MainWindow : Window
             }
         }
 
-        SetContent("PerfButton", "Stop monitoring");
+        SetContent("PerfButton", "Stop frame capture");
         SetText("PerfState", target == null
             ? "Monitoring the machine and the connection. Tick a game for frame rate too."
             : $"Monitoring. Frame data follows {target}.exe once it is running.");
@@ -706,18 +736,16 @@ public partial class MainWindow : Window
 
     private void StopPerf()
     {
-        _system?.Dispose();
-        _system = null;
-
-        // Leave the stream alone if the overlay is still using it.
+        // The system trace keeps running - it feeds the ring on the CONTROL tab.
+        // Leave the frame stream alone if the overlay is still using it.
         if (_hud == null && _monitor != null)
         {
             _monitor.Updated -= OnFrameStats;
             _monitor.Stop();
         }
 
-        SetContent("PerfButton", "Start monitoring");
-        SetText("PerfState", "Not monitoring.");
+        SetContent("PerfButton", "Start frame capture");
+        SetText("PerfState", "System and connection live. Frame capture stopped.");
     }
 
     private void OnFrameStats(LiveStats stats)
@@ -760,6 +788,11 @@ public partial class MainWindow : Window
         Tint("PerfJitter", stats.JitterMs < 5 ? "#EDEDF2" : stats.JitterMs < 15 ? "#E0A45C" : "#FF4A54");
 
         DrawPingGraph(stats.PingHistory);
+
+        // Frame rate is the better trace when we have it; CPU load otherwise.
+        PushRing(_lastFrameStats.HasFrameData ? _lastFrameStats.Fps : stats.CpuPercent);
+        SetText("RingText", _lastFrameStats.HasFrameData ? "FRAME RATE" : "CPU LOAD");
+
         if (_monitor == null || !_monitor.IsRunning) RenderFrames();
     }
 
@@ -798,6 +831,44 @@ public partial class MainWindow : Window
         {
             Points = points,
             Stroke = new SolidColorBrush(Color.Parse("#E01F2D")),
+            StrokeThickness = 2,
+            StrokeJoin = PenLineJoin.Round
+        });
+    }
+
+    /// <summary>
+    /// The ring is a real trace, not a decorative pulse: frame rate when a game is being
+    /// measured, otherwise CPU load. A dial that draws the same squiggle whatever the
+    /// machine is doing is a lie told in pixels.
+    /// </summary>
+    private void PushRing(double value)
+    {
+        _ringHistory.Add(value);
+        while (_ringHistory.Count > 48) _ringHistory.RemoveAt(0);
+
+        var canvas = Ctl<Canvas>("RingGraph");
+        if (canvas == null) return;
+
+        canvas.Children.Clear();
+        if (_ringHistory.Count < 2) return;
+
+        double max = Math.Max(_ringHistory.Max(), 1);
+        double min = Math.Min(_ringHistory.Min(), 0);
+        double span = Math.Max(max - min, 1);
+        double width = canvas.Width, height = canvas.Height;
+
+        var points = new Avalonia.Points();
+        for (int i = 0; i < _ringHistory.Count; i++)
+        {
+            double x = width * i / Math.Max(_ringHistory.Count - 1, 1);
+            double y = height - (_ringHistory[i] - min) / span * (height - 6) - 3;
+            points.Add(new Avalonia.Point(x, y));
+        }
+
+        canvas.Children.Add(new Polyline
+        {
+            Points = points,
+            Stroke = new SolidColorBrush(Color.Parse("#FF3B47")),
             StrokeThickness = 2,
             StrokeJoin = PenLineJoin.Round
         });

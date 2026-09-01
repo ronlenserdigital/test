@@ -65,7 +65,7 @@ internal static class Program
             "PerfButton", "PerfState", "PerfFps", "PerfLow", "PerfFrameTime", "PerfStutter", "PerfFpsNote",
             "PerfPing", "PerfJitter", "PerfLoss", "PerfTarget", "PerfPingGraph",
             "PerfCpuBar", "PerfCpuText", "PerfGpuBar", "PerfGpuText", "PerfRamBar", "PerfRamText",
-            "PerfNet", "PerfAdapter",
+            "PerfNet", "PerfAdapter", "RingGraph", "AddGameNote", "AddGameButton",
             "HeroGameName", "HeroStatus", "HeroDot", "HeroProgress", "WatchButton",
             "AntiCheatBanner", "AntiCheatText", "SafeMode",
             "StatusState", "StatusGame", "StatusCpu", "StatusTimer", "StatusJournal", "StatusPower",
@@ -126,14 +126,22 @@ internal static class Program
             var tab = window.FindControl<Button>("TabControlBtn");
             Check("active tab carries the underline class", tab != null && tab.Classes.Contains("on"));
 
-            Check("library starts hidden", !Visible("LibraryPanel"));
-            Click("LibraryToggle");
-            Check("controller button opens the library", Visible("LibraryPanel"));
+            Check("library is open on launch", Visible("LibraryPanel"));
             var toggle = window.FindControl<Button>("LibraryToggle");
-            Check("open state is styled", toggle != null && toggle.Classes.Contains("primary"));
             Click("LibraryToggle");
-            Check("controller button closes it again", !Visible("LibraryPanel"));
-            Check("closed state is styled", toggle != null && toggle.Classes.Contains("icon"));
+            Check("controller button closes the library", !Visible("LibraryPanel"));
+            Click("LibraryToggle");
+            Check("controller button opens it again", Visible("LibraryPanel"));
+
+            // A name that is not running must be refused, not silently accepted.
+            var beforeRows = window.FindControl<StackPanel>("GameList").Children.Count;
+            window.FindControl<TextBox>("CustomExeBox").Text = "definitelynotrunning";
+            Click("AddGameButton");
+            Check("a game that is not running is refused",
+                  window.FindControl<StackPanel>("GameList").Children.Count == beforeRows);
+            Check("and it says why",
+                  (window.FindControl<TextBlock>("AddGameNote")?.Text ?? "").Contains("not running"),
+                  window.FindControl<TextBlock>("AddGameNote")?.Text);
 
             // A preset must not throw even with no engine behind it.
             Click("ModeSimpleBtn");
