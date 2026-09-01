@@ -119,6 +119,7 @@
         <StackPanel Grid.Column="0" Orientation="Horizontal">
           <Button x:Name="TabControlBtn" Classes="tab on" Content="CONTROL" Click="OnTabControl" />
           <Button x:Name="TabSettingsBtn" Classes="tab" Content="SETTINGS" Click="OnTabSettings" />
+          <Button x:Name="TabAuditBtn" Classes="tab" Content="AUDIT" Click="OnTabAudit" />
           <Button x:Name="TabActivityBtn" Classes="tab" Content="ACTIVITY" Click="OnTabActivity" />
         </StackPanel>
 
@@ -509,6 +510,25 @@
             <Border Height="10" Background="Transparent" />
           </StackPanel>
         </ScrollViewer>
+
+        <!-- ============ AUDIT ============ -->
+        <Grid x:Name="PanelAudit" RowDefinitions="Auto,*" IsVisible="False">
+          <Border Grid.Row="0" Classes="card" Margin="0,0,0,16">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="8">
+                <TextBlock Classes="cardhead" Text="SYSTEM AUDIT" />
+                <TextBlock Classes="body" MaxWidth="760"
+                           Text="Most of the performance worth having is not a Windows tweak. It is RAM left at JEDEC speed, a 144 Hz monitor running at 60, a thermal limit, or a bad driver and Windows build pairing - things STRYKR cannot flip but can absolutely find. Worst first." />
+                <TextBlock x:Name="AuditSummary" Classes="body" Foreground="#7E7F8A" Text="Not run yet." />
+              </StackPanel>
+              <Button Grid.Column="1" x:Name="AuditButton" Classes="danger" Content="Run audit"
+                      VerticalAlignment="Center" Click="OnAuditClick" />
+            </Grid>
+          </Border>
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="AuditList" Spacing="12" />
+          </ScrollViewer>
+        </Grid>
 
         <!-- ============ ACTIVITY ============ -->
         <Grid x:Name="PanelActivity" RowDefinitions="*,Auto" IsVisible="False">

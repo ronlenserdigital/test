@@ -209,6 +209,37 @@ internal static class TestMain
         Check("detection survives with nothing running", GameDetector.Detect(new[] { "nothingrunning" }) == null
               || true, "platform dependent, must not throw");
 
+        Console.WriteLine("\nAudit findings");
+        var findings = Audit.Run(new Profile());
+        Check("audit runs without throwing off-Windows", findings != null, $"{findings?.Count ?? 0} findings");
+        Check("findings are ordered worst first",
+              findings.Select(f => (int)f.Severity).SequenceEqual(
+                  findings.Select(f => (int)f.Severity).OrderByDescending(x => x)));
+        Check("every finding states what it is worth", findings.All(f => !string.IsNullOrWhiteSpace(f.Gain)));
+        Check("every finding has a title and detail",
+              findings.All(f => !string.IsNullOrWhiteSpace(f.Title) && !string.IsNullOrWhiteSpace(f.Detail)));
+        Check("actionable findings carry a fix id and label",
+              findings.Where(f => f.Actionable).All(f => !string.IsNullOrWhiteSpace(f.FixId)
+                                                         && !string.IsNullOrWhiteSpace(f.FixLabel)));
+
+        // The two security-relevant findings must stay advisory: STRYKR explains, Windows acts.
+        var vbs = findings.FirstOrDefault(f => f.Title.Contains("VBS"));
+        Check("VBS finding is advisory only, never a button", vbs == null || !vbs.Actionable);
+        var defender = findings.FirstOrDefault(f => f.Title.Contains("Defender"));
+        Check("Defender finding is advisory only, never a button", defender == null || !defender.Actionable);
+
+        Console.WriteLine("\nGame config safety");
+        Check("Fortnite writer reports availability honestly",
+              GameConfig.FortniteAvailable == File.Exists(Path.Combine(
+                  Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                  "FortniteGame", "Saved", "Config", "WindowsClient", "GameUserSettings.ini")));
+        Check("refuses to write a config that is not there",
+              GameConfig.FortniteAvailable || !GameConfig.ApplyFortnitePerformance().Applied);
+        Check("only documented sg.* and exposed keys are written",
+              GameConfig.Describe().Split('\n').All(l => l.Trim().Length == 0
+                  || l.TrimStart().StartsWith("sg.") || l.TrimStart().StartsWith("FrameRateLimit")
+                  || l.TrimStart().StartsWith("bMotionBlur")));
+
         Console.WriteLine("\nPriority mapping");
         Check("High round-trips", Profile.PriorityName(Profile.PriorityClassFor("High")) == "High");
         Check("Idle round-trips", Profile.PriorityName(Profile.PriorityClassFor("idle")) == "Idle");

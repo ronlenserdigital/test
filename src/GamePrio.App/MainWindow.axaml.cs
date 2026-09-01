@@ -127,17 +127,20 @@ public partial class MainWindow : Window
 
     private void OnTabControl(object sender, RoutedEventArgs e) => SetTab(0);
     private void OnTabSettings(object sender, RoutedEventArgs e) => SetTab(1);
-    private void OnTabActivity(object sender, RoutedEventArgs e) => SetTab(2);
+    private void OnTabAudit(object sender, RoutedEventArgs e) => SetTab(2);
+    private void OnTabActivity(object sender, RoutedEventArgs e) => SetTab(3);
 
     private void SetTab(int index)
     {
         SetVisible("PanelControl", index == 0);
         SetVisible("PanelSettings", index == 1);
-        SetVisible("PanelActivity", index == 2);
+        SetVisible("PanelAudit", index == 2);
+        SetVisible("PanelActivity", index == 3);
 
         SetTabState("TabControlBtn", index == 0);
         SetTabState("TabSettingsBtn", index == 1);
-        SetTabState("TabActivityBtn", index == 2);
+        SetTabState("TabAuditBtn", index == 2);
+        SetTabState("TabActivityBtn", index == 3);
     }
 
     private void SetTabState(string name, bool on)
@@ -448,7 +451,7 @@ public partial class MainWindow : Window
     private void OnVerifyClick(object sender, RoutedEventArgs e)
     {
         ApplyControlsToProfile();
-        SetTab(2);
+        SetTab(3);
         Task.Run(() =>
         {
             try { Verify.Run(_engine.Profile, _engine.Governor); }
@@ -464,7 +467,7 @@ public partial class MainWindow : Window
 
         var button = Ctl<Button>("BenchButton");
         if (button != null) button.IsEnabled = false;
-        SetTab(2);
+        SetTab(3);
         Log.Info("benchmark starting");
 
         Task.Run(() =>
@@ -516,11 +519,153 @@ public partial class MainWindow : Window
     private void OnExportClick(object sender, RoutedEventArgs e)
     {
         ApplyControlsToProfile();
-        SetTab(2);
+        SetTab(3);
         Task.Run(() =>
         {
             try { Report.Export(_engine.Profile, _engine.Governor); }
             catch (Exception ex) { Log.Error($"could not write report: {ex.Message}"); }
+        });
+    }
+
+    private void OnAuditClick(object sender, RoutedEventArgs e)
+    {
+        if (_engine == null) return;
+
+        var button = Ctl<Button>("AuditButton");
+        if (button != null) { button.IsEnabled = false; button.Content = "Auditing..."; }
+        SetText("AuditSummary", "Reading the machine...");
+
+        Task.Run(() =>
+        {
+            List<Finding> findings;
+            try { findings = Audit.Run(_engine.Profile); }
+            catch (Exception ex) { Log.Error($"audit failed: {ex.Message}"); findings = new List<Finding>(); }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                RenderAudit(findings);
+                if (button != null) { button.IsEnabled = true; button.Content = "Re-run audit"; }
+            });
+        });
+    }
+
+    private void RenderAudit(List<Finding> findings)
+    {
+        var list = Ctl<StackPanel>("AuditList");
+        if (list == null) return;
+        list.Children.Clear();
+
+        int critical = findings.Count(f => f.Severity == Severity.Critical);
+        int warning = findings.Count(f => f.Severity == Severity.Warning);
+        SetText("AuditSummary", findings.Count == 0
+            ? "Nothing could be read - are you elevated?"
+            : $"{findings.Count} checks · {critical} critical · {warning} worth attention · " +
+              $"{findings.Count(f => f.Severity == Severity.Good)} already correct");
+
+        foreach (var finding in findings) list.Children.Add(BuildFindingCard(finding));
+    }
+
+    private Border BuildFindingCard(Finding finding)
+    {
+        (string label, string colour, string wash) = finding.Severity switch
+        {
+            Severity.Critical => ("CRITICAL", "#FF4A54", "#1C0C0F"),
+            Severity.Warning => ("ATTENTION", "#E0A45C", "#1C160C"),
+            Severity.Good => ("OK", "#5FBF8F", "#0C1A13"),
+            _ => ("NOTE", "#8FA8D0", "#0C1119")
+        };
+
+        var head = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        head.Children.Add(new Border
+        {
+            Background = new SolidColorBrush(Color.Parse(wash)),
+            BorderBrush = new SolidColorBrush(Color.Parse(colour)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(7, 3),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = label,
+                FontSize = 10,
+                FontWeight = FontWeight.Bold,
+                LetterSpacing = 1,
+                Foreground = new SolidColorBrush(Color.Parse(colour))
+            }
+        });
+        head.Children.Add(new TextBlock
+        {
+            Text = finding.Title,
+            FontSize = 15,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.Parse("#EDEDF2")),
+            VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        var body = new StackPanel { Spacing = 10 };
+        body.Children.Add(head);
+        body.Children.Add(new TextBlock
+        {
+            Text = finding.Detail,
+            FontSize = 12.5,
+            LineHeight = 19,
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 820,
+            Foreground = new SolidColorBrush(Color.Parse("#93949E"))
+        });
+
+        var footer = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
+        footer.Children.Add(new TextBlock
+        {
+            Text = "WORTH:  " + finding.Gain,
+            FontFamily = new FontFamily("Bahnschrift, Consolas, monospace"),
+            FontSize = 11.5,
+            FontWeight = FontWeight.Bold,
+            LetterSpacing = 0.6,
+            Foreground = new SolidColorBrush(Color.Parse(finding.Severity == Severity.Good ? "#5FBF8F" : "#E01F2D")),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        if (finding.Actionable)
+        {
+            var fix = new Button { Content = finding.FixLabel, Padding = new Thickness(16, 8), FontSize = 12 };
+            fix.Classes.Add("danger");
+            fix.Click += (_, _) => RunFix(finding, fix);
+            footer.Children.Add(fix);
+        }
+        body.Children.Add(footer);
+
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#0F1014")),
+            BorderBrush = new SolidColorBrush(Color.Parse(finding.Severity == Severity.Critical ? "#4A161C" : "#1E1F26")),
+            BorderThickness = new Thickness(1, 1, 1, 1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(22, 18),
+            Child = body
+        };
+    }
+
+    private void RunFix(Finding finding, Button button)
+    {
+        button.IsEnabled = false;
+        button.Content = "Working...";
+
+        Task.Run(() =>
+        {
+            Tweaks.Result result;
+            try { result = Tweaks.Apply(finding.FixId, _engine.Profile); }
+            catch (Exception ex) { result = new Tweaks.Result(false, ex.Message); }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                button.IsEnabled = !result.Applied;
+                button.Content = result.Applied
+                    ? (result.NeedsReboot ? "Done - reboot needed" : "Done")
+                    : finding.FixLabel;
+                if (!result.Applied) SetTab(3);
+            });
         });
     }
 

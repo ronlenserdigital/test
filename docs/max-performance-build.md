@@ -44,6 +44,50 @@ Nothing was dropped in the redesign. Every feature is reachable:
 `Export report` writes a timestamped file to your Desktop: machine, full profile, and a
 complete verify pass read back out of Windows.
 
+## The AUDIT tab
+
+Research into what actually moves a framerate produced an uncomfortable finding: **six of
+the ten changes worth more than 5% are BIOS or in-game settings that no Windows program can
+flip.** RAM left at JEDEC speed instead of its rated XMP/EXPO profile. Resizable BAR off. A
+144 Hz panel running at 60. A thermal limit. A known-bad Windows build and driver pairing.
+
+STRYKR cannot change those - but it can read every one of them, and telling you your RAM is
+at 4800 instead of 6000 is worth more than every registry key in this program combined.
+
+The AUDIT tab runs 17 checks and lists findings worst-first, each with what it is worth:
+
+| Check | Worth if wrong |
+|---|---|
+| XMP / EXPO profile off | 8-12%, up to 29% on 1% lows |
+| Monitor below its rated refresh rate | up to 2-4x the frames you can see |
+| Pagefile disabled | negative - costs stability, not frames |
+| Memory Integrity (VBS) on | up to 10% CPU-bound |
+| Thermal / power limit | 0% or 10-30% |
+| Bad Windows build + driver pairing | up to 33-50% in affected titles |
+| Fortnite graphics settings | often 20%+ |
+| Resizable BAR | 5-15%, occasionally negative |
+| Defender scanning game folders | 2-8% on 1% lows |
+| Game Mode off, power plan, HAGS, MSI mode, MPO, RAM, drive space, driver | 0-5% each |
+
+Findings that STRYKR can act on carry a Fix button - refresh rate, MSI mode, MPO, network
+throttling, Game Mode, and the Fortnite config - and every one is journalled first.
+
+### Two things it deliberately will not do for you
+
+**Turning off Memory Integrity (VBS)** and **adding Defender exclusions** are reported, with
+what they are worth and exactly where to change them, but there is no button. Both are
+reasonable choices on your own machine. Neither is something an unsigned third-party binary
+should do on your behalf: a program that silently weakens kernel code integrity and writes
+its own antivirus exclusions is behaving exactly like malware, and that is also how
+anti-cheat and Defender would read it. The audit explains; Windows performs.
+
+### Game settings
+
+`GameConfig` writes Fortnite's competitive values into its own `GameUserSettings.ini`,
+keeping a timestamped copy of the original beside it. Only keys the game's own options menu
+already exposes are touched - Epic banned client modification in 2017, and an FPS gain is
+not worth an anti-cheat ban. Fortnite rewrites the file on exit, so it may need re-applying.
+
 ## The game library is hidden by default
 
 With auto-detect on, most sessions never need to touch the library, so it no longer takes

@@ -60,7 +60,8 @@ internal static class Program
         {
             "GameList", "SearchBox", "CustomExeBox", "SelectedCount", "ExecCount",
             "TabControlBtn", "TabSettingsBtn", "TabActivityBtn",
-            "PanelControl", "PanelSettings", "PanelActivity",
+            "PanelControl", "PanelSettings", "PanelAudit", "PanelActivity",
+            "TabAuditBtn", "AuditButton", "AuditSummary", "AuditList",
             "HeroGameName", "HeroStatus", "HeroDot", "HeroProgress", "WatchButton",
             "AntiCheatBanner", "AntiCheatText", "SafeMode",
             "StatusState", "StatusGame", "StatusCpu", "StatusTimer", "StatusJournal", "StatusPower",
@@ -102,8 +103,11 @@ internal static class Program
             Click("ModeSimpleBtn");
             Check("Simple panel shows", Visible("SimplePanel") && !Visible("AdvancedPanel"));
 
+            Click("TabAuditBtn");
+            Check("AUDIT tab switches", Visible("PanelAudit") && !Visible("PanelSettings"));
+
             Click("TabActivityBtn");
-            Check("ACTIVITY tab switches", Visible("PanelActivity") && !Visible("PanelSettings"));
+            Check("ACTIVITY tab switches", Visible("PanelActivity") && !Visible("PanelAudit"));
 
             Click("ViewActivityButton");
             Check("View activity reaches the log", Visible("PanelActivity"));
