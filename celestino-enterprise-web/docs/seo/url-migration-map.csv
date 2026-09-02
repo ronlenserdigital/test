@@ -1,0 +1,35 @@
+old_url,new_url,status,reason,redirect_required,canonical_destination
+/,/,confirmed,"Indexed home page (title 'Celestino Enterprise : 25+ Experience in IT Solution'); rewritten in place",no,/
+/home/,/,confirmed,"Indexed duplicate of / with title 'Home' (WordPress static-front-page artefact); consolidate to root",yes,/
+/services/,/,probable — verify with client export,"No search evidence; target IA has no services hub — recommend adding /services hub and re-pointing; interim to home",yes,/
+/web-development/,/services/web-application-engineering,probable — verify with client export,"No search evidence; website development copy lives on home page; topic maps to web engineering",yes,/services/web-application-engineering
+/web-app-development/,/services/web-application-engineering,probable — verify with client export,"No search evidence; 'Web Applications' section on home page",yes,/services/web-application-engineering
+/mobile-app-development/,/services/software-development,probable — verify with client export,"No search evidence; mobile app copy on home page; not in new IA — client to confirm offer; fallback to software page",yes,/services/software-development
+/enterprise-solutions/,/services/software-development,probable — verify with client export,"No search evidence; 'Enterprise Solutions' (custom APIs, CRM, inventory, workflows) maps to custom software",yes,/services/software-development
+/it-solutions/,/services/managed-it,probable — verify with client export,"No search evidence; 'IT Solutions' headline maps to managed IT",yes,/services/managed-it
+/consultancy/,/services/security-risk-advisory,probable — verify with client export,"No search evidence; 'Consultancy' / 'advisory services' maps to advisory page",yes,/services/security-risk-advisory
+/cybersecurity/,/services/cybersecurity,probable — verify with client export,"No search evidence; 'Cybersecurity' headline on home page",yes,/services/cybersecurity
+/business-it-support/,/services/managed-it,probable — verify with client export,"No search evidence; 'Business IT Support' section on home page maps to managed IT",yes,/services/managed-it
+/co-managed-it/,/services/co-managed-it,probable — verify with client export,"No search evidence; 'Co-Managed IT' section on home page; one-to-one match",yes,/services/co-managed-it
+/cloud-services/,/services/cloud-infrastructure,probable — verify with client export,"No search evidence; Yelp/Nextdoor category 'cloud services'; cloud/on-prem support copy on home",yes,/services/cloud-infrastructure
+/network-services/,/services/network-management,probable — verify with client export,"No search evidence; Yelp/Nextdoor category 'telecom or network services'",yes,/services/network-management
+/disaster-recovery/,/services/backup-disaster-recovery,probable — verify with client export,"No search evidence; 'disaster recovery' listed under co-managed IT",yes,/services/backup-disaster-recovery
+/ecommerce/,/services/web-application-engineering,probable — verify with client export,"No search evidence; e-commerce (Magento/Shopify/BigCommerce) copy on home page; client to confirm offer",yes,/services/web-application-engineering
+/e-commerce-development/,/services/web-application-engineering,probable — verify with client export,"Alternate slug guess for e-commerce section",yes,/services/web-application-engineering
+/cms/,/services/web-application-engineering,probable — verify with client export,"No search evidence; CMS solutions copy on home page",yes,/services/web-application-engineering
+/full-stack-development/,/services/software-development,probable — verify with client export,"No search evidence; 'Full-Stack Developers' copy on home page",yes,/services/software-development
+/design-animation/,/services/web-application-engineering,probable — verify with client export,"No search evidence; 'Design & Animation' section on home page; not in new IA — client to confirm; redirect fallback",yes,/services/web-application-engineering
+/portfolio/,/case-studies,probable — verify with client export,"No search evidence; portfolio items (Phenom Nation, Aerogin USA) attributed to home page",yes,/case-studies
+/blog/,/resources,probable — verify with client export,"Searched directly; nothing indexed — blog likely absent; catch stray URL",yes,/resources
+/about/,/about,probable — verify with client export,"No search evidence; searched directly",yes,/about
+/about-us/,/about,probable — verify with client export,"Alternate slug guess; no search evidence",yes,/about
+/contact/,/contact,probable — verify with client export,"No search evidence; searched directly",yes,/contact
+/contact-us/,/contact,probable — verify with client export,"Alternate slug guess; no search evidence",yes,/contact
+/privacy-policy/,/trust,probable — verify with client export,"No search evidence; no legal page found. Target IA lacks /privacy — recommend adding /privacy and re-pointing; interim to /trust",yes,/trust
+/terms/,/trust,probable — verify with client export,"Slug guess; no evidence; same recommendation as privacy",yes,/trust
+/sitemap.xml,/sitemap.xml,probable — verify with client export,"Technical; regenerate on new platform; no redirect",no,/sitemap.xml
+/robots.txt,/robots.txt,probable — verify with client export,"Technical; regenerate on new platform; no redirect",no,/robots.txt
+/feed/,/resources,probable — verify with client export,"WordPress RSS guess; only if platform confirmed as WordPress",yes,/resources
+/wp-content/uploads/*,/,probable — verify with client export,"WordPress media guess; only redirect if externally linked assets are found in client export; otherwise 410",yes,/
+/wp-json/*,/,probable — verify with client export,"WordPress REST guess; return 410 on new platform",no,/
+/?p=*,/,probable — verify with client export,"WordPress numeric permalink guess; map per-ID from export if any are indexed",yes,/
