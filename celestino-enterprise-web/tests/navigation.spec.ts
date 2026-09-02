@@ -52,3 +52,36 @@ test.describe("mobile navigation", () => {
     expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
   });
 });
+
+test.describe("mega menu navigation", () => {
+  test("clicking a link inside every open panel navigates", async ({ page, isMobile }) => {
+    test.skip(Boolean(isMobile), "desktop only");
+    await page.goto("/");
+    const targets = [
+      ["Services", "/services/managed-it"],
+      ["Solutions", "/solutions/cyber-resilience"],
+      ["Industries", "/industries/healthcare"],
+      ["Why Celestino", "/approach"],
+      ["Resources", "/resources/topics/cybersecurity"],
+    ] as const;
+    for (const [label, href] of targets) {
+      await page.goto("/");
+      const trigger = page.getByRole("button", { name: label, exact: true });
+      await trigger.click();
+      const panelId = await trigger.getAttribute("aria-controls");
+      const panel = page.locator(`[id="${panelId}"]`);
+      await expect(panel).toBeVisible();
+      await panel.locator(`a[href="${href}"]`).first().click();
+      await expect(page).toHaveURL(new RegExp(`${href.replace(/\//g, "\\/")}$`));
+      await expect(page.locator("main h1")).toBeVisible();
+    }
+  });
+
+  test("feature card inside the panel navigates", async ({ page, isMobile }) => {
+    test.skip(Boolean(isMobile), "desktop only");
+    await page.goto("/");
+    await page.getByRole("button", { name: "Solutions", exact: true }).click();
+    await page.getByRole("link", { name: /Cyber resilience readiness checklist/ }).click();
+    await expect(page).toHaveURL(/\/resources\/cyber-resilience-readiness-checklist$/);
+  });
+});

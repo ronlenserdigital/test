@@ -19,14 +19,14 @@ const LAYERS = [
   { id: "monitoring", label: "Monitoring", status: "24/7 alerting" },
 ] as const;
 
-const W = 560;
+const W = 660;
 const H = 600;
 const PLANE_W = 250;
 const PLANE_H = 46;
 const SKEW = 70; // horizontal offset for the isometric plane
 const GAP = 66;
 const TOP = 46;
-const LEFT = 150;
+const LEFT = 170;
 
 function planePath(y: number) {
   const x0 = LEFT;
@@ -43,7 +43,7 @@ export function HeroVisual({ className }: { className?: string }) {
         height={H}
         role="img"
         aria-labelledby="hero-visual-title hero-visual-desc"
-        className="h-auto w-full max-w-[640px]"
+        className="h-auto w-full max-w-[680px]"
       >
         <title id="hero-visual-title">Celestino layered operations model</title>
         <desc id="hero-visual-desc">
@@ -70,7 +70,7 @@ export function HeroVisual({ className }: { className?: string }) {
 
         {/* Background measurement grid */}
         <g stroke="var(--grid-line)" strokeWidth="1">
-          {Array.from({ length: 12 }, (_, i) => (
+          {Array.from({ length: 14 }, (_, i) => (
             <line key={`v${i}`} x1={i * 48 + 8} y1="0" x2={i * 48 + 8} y2={H} />
           ))}
           {Array.from({ length: 13 }, (_, i) => (

@@ -25,6 +25,7 @@ export function Header({ items, primaryCta }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const openTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
   const baseId = useId();
@@ -78,7 +79,7 @@ export function Header({ items, primaryCta }: HeaderProps) {
       }
     };
     const onDown = (e: PointerEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) closeNow();
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) closeNow();
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
@@ -110,6 +111,7 @@ export function Header({ items, primaryCta }: HeaderProps) {
 
   return (
     <header
+      ref={headerRef}
       className={cn(
         "theme-dark sticky top-0 z-50 border-b transition-[background-color,border-color] duration-[var(--duration-base)]",
         scrolled || openIndex !== null ? "border-line bg-bg/95 backdrop-blur-md" : "border-transparent bg-bg",
