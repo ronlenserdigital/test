@@ -27,6 +27,8 @@ Then set `main` as the production branch and protect it (require PR + CI).
 
 Team: `ronlenserdigital's projects` (`team_7iDMD0f604trMthifz4L6vi7`, Hobby plan at time of writing).
 
+Project created 2026-09-02: `celestino-enterprise-web` (`prj_lZvzuVwmam2nwkxMggBTEExWMkZx`), linked to `ronlenserdigital/test` with root directory `celestino-enterprise-web`, production branch `main`. Every push to the rebuild branch produces a preview deployment; production deploys once the app is merged to `main` (or the project is re-linked to a dedicated repository).
+
 1. Import the repository (or use `create_git_project` with `rootDirectory: celestino-enterprise-web` if staying in the monorepo).
 2. Framework preset: Next.js. Build `pnpm build`, install `pnpm install --frozen-lockfile`. Node 22.
 3. Environment variables (Production):
