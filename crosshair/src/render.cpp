@@ -84,6 +84,49 @@ static void Outline(uint32_t oc)
     free(copy);
 }
 
+// soft bloom: blurred alpha halo of the crosshair, drawn behind it
+static void Glow(uint32_t col, int amount)
+{
+    if (amount <= 0) return;
+    int n = S_W * S_H;
+    uint8_t* a = (uint8_t*)calloc(n, 1);
+    uint8_t* b = (uint8_t*)calloc(n, 1);
+    if (!a || !b) { free(a); free(b); return; }
+    for (int i = 0; i < n; i++) a[i] = (uint8_t)((S_P[i] >> 24) & 0xFF);
+
+    for (int pass = 0; pass < 2; pass++) {
+        for (int y = 0; y < S_H; y++)
+            for (int x = 0; x < S_W; x++) {
+                int sum = 0, cnt = 0;
+                for (int k = -2; k <= 2; k++) {
+                    int nx = x + k;
+                    if (nx < 0 || nx >= S_W) continue;
+                    sum += a[y * S_W + nx]; cnt++;
+                }
+                b[y * S_W + x] = (uint8_t)(cnt ? sum / cnt : 0);
+            }
+        for (int y = 0; y < S_H; y++)
+            for (int x = 0; x < S_W; x++) {
+                int sum = 0, cnt = 0;
+                for (int k = -2; k <= 2; k++) {
+                    int ny = y + k;
+                    if (ny < 0 || ny >= S_H) continue;
+                    sum += b[ny * S_W + x]; cnt++;
+                }
+                a[y * S_W + x] = (uint8_t)(cnt ? sum / cnt : 0);
+            }
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (S_P[i] & 0xFF000000) continue;
+        int ga = a[i] * amount / 100;
+        if (ga <= 0) continue;
+        if (ga > 200) ga = 200;
+        S_P[i] = ((uint32_t)ga << 24) | (col & 0x00FFFFFF);
+    }
+    free(a); free(b);
+}
+
 static void ApplyOpacity(int op)
 {
     if (op >= 255) return;
@@ -128,6 +171,7 @@ void ChDefault(Crosshair* c, int preset)
     c->centerDot    = p->dot;
     c->outline      = p->outline;
     c->opacity      = 255;
+    c->glow         = 0;
     c->gridW = c->gridH = 32;
     c->pxScale = 2;
     c->imageScale = 100;
@@ -171,6 +215,7 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
                 Bar(cx * s, cy * s, cx * s + s - 1, cy * s + s - 1, v);
             }
         if (c->outline) Outline(c->outlineColor);
+        Glow(c->color, c->glow);
         ApplyOpacity(c->opacity);
         out->px = buf; out->w = w; out->h = h;
         out->ax = (c->gridW / 2) * s + s / 2;
@@ -184,7 +229,7 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
     int len = max(0, c->length);
     int gap = max(0, c->gap);
     int dot = max(1, c->dotSize);
-    int half = gap + len + t + dot + 3;
+    int half = gap + len + t + dot + 3 + (c->glow > 0 ? 6 : 0);
     if (half > 400) half = 400;
     int n = half * 2 + 1;
 
@@ -231,6 +276,7 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
         Bar(d0, d0, d1, d1, col);
     }
     if (c->outline) Outline(c->outlineColor);
+    Glow(c->color, c->glow);
     ApplyOpacity(c->opacity);
 
     out->px = buf; out->w = n; out->h = n; out->ax = half; out->ay = half;

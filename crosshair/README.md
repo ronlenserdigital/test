@@ -18,18 +18,25 @@ Pure Win32 + GDI, statically linked, no framework.
 
 ## What it does
 
-**Home** — the active crosshair on a live preview, its profile, and your saved library.
+**Home** — a large live preview with your real game behind it. While a game has
+focus DEADCENTER grabs a downscaled frame of that monitor, so when you alt-tab
+back you are tuning the crosshair against the actual scene, not a gradient.
+Falls back to Dark / Arena / Grass / Sky if a frame is not available
+(exclusive-fullscreen and protected surfaces capture black).
 
 **Design** — three modes so the complexity is opt-in:
-- **Basic**: style (cross / dot / T / circle / chevron), colour, length, thickness,
-  gap, opacity, centre dot, outline. Colour changes apply instantly.
-- **Advanced**: centre-dot size, X/Y offset, outline colour, custom image upload
-  (PNG/BMP/JPG/GIF, alpha preserved, 10–400% scaling).
-- **Pixel Editor**: 16–48px canvas with pen, eraser, flood fill, line, rect,
-  ellipse, X/Y mirror and undo — hidden one layer deep, where it belongs.
+- **Basic**: colour, opacity, thickness, outline, length, centre dot, gap,
+  bloom/glow and X/Y offset. Every change applies to the overlay instantly.
+- **Shape**: cross / dot / T / circle / chevron plus their geometry.
+- **Effects**: bloom, outline colour, opacity.
+- **Advanced**: custom image upload (PNG/BMP/JPG/GIF, alpha preserved, 10–400%)
+  and the pixel-art layer.
 
-Preview environments (Dark / Light / Grass / Sky / Concrete) and 1x/2x/4x zoom
-let you check visibility before you load in. Eight presets sit under the canvas.
+**Studio** is the pixel editor — 16–48px canvas with pen, eraser, flood fill,
+line, rect, ellipse, X/Y mirror and undo — one layer deep, where it belongs.
+
+Preview zoom runs 100% / 200% / 400%. Eight presets sit under the canvas, and
+**Themes** swaps the app accent.
 
 **Game Profiles** — every game remembers its own crosshair and resolution, and
 DEADCENTER switches automatically the moment that game takes focus.
@@ -39,7 +46,11 @@ update checks.
 
 ## Controls
 
-- **F12** anywhere hides or brings back the window (printed in the title bar).
+- The overlay hides the **instant** you alt-tab out of the game — foreground
+  changes come from a `SetWinEventHook`, not a poll — and comes straight back
+  when you tab in. Turn that rule off with **Only in game** (in the sidebar card
+  and in Settings) to keep the crosshair on the desktop too.
+- **F12** anywhere hides or brings back the window.
 - **HIDE** removes the window *and* the tray icon — the app vanishes completely.
 - **MIN** / **×**, tray icon with right-click menu, Esc to hide.
 - The overlay is layered, click-through and no-activate: it never steals a click

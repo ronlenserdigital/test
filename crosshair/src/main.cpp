@@ -11,6 +11,7 @@ static NOTIFYICONDATAW g_nid;
 static BOOL            g_trayOn = FALSE;
 static BOOL            g_inGame = FALSE;
 static wchar_t         g_selfExe[64] = L"";
+static HWINEVENTHOOK   g_hook = NULL;
 
 #define TIMER_SCAN 1
 
@@ -72,7 +73,10 @@ static void Scan(void)
         if (game) wcsncpy(g_lastGame, exe, 63);
     }
 
-    if (game) OverlaySetMonitorFrom(fg);
+    if (game) {
+        OverlaySetMonitorFrom(fg);
+        CapPoll(fg);                       // keep a fresh frame for the editor backdrop
+    }
 
     // auto-switch to the profile that owns this game
     if (game && prof >= 0 && g_prof[prof].autoLaunch && prof != g_activeProfile) {
@@ -91,14 +95,24 @@ static void Scan(void)
         g_inGame = game;
         wchar_t s[160];
         if (game) {
-            _snwprintf(s, 160, L"%s detected \x2014 overlay active", g_lastGame);
+            _snwprintf(s, 160, L"%s \x2014 overlay active", g_lastGame);
             if (g_set.autoOpenPanel) { TrayShow(TRUE); ShellShow(TRUE); }
         } else {
-            wcscpy(s, g_set.onlyInGame ? L"Waiting for a game..." : L"Overlay always on.");
+            wcscpy(s, g_set.onlyInGame ? L"Waiting for a game" : L"Overlay always on");
         }
         s[159] = 0;
         ShellStatus(s);
+        ShellGameChanged();
     }
+}
+
+// foreground changes arrive as an event, so the overlay disappears the instant
+// you alt-tab instead of waiting for the next poll
+static void CALLBACK ForegroundHook(HWINEVENTHOOK hook, DWORD ev, HWND h,
+                                    LONG idObj, LONG idChild, DWORD tid, DWORD ms)
+{
+    (void)hook; (void)ev; (void)h; (void)idObj; (void)idChild; (void)tid; (void)ms;
+    Scan();
 }
 
 static HICON MakeIcon(void)
@@ -243,7 +257,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmd, int show)
     TrayShow(TRUE);
     if (!silent) ShellShow(TRUE);
 
-    SetTimer(g_msg, TIMER_SCAN, 400, NULL);
+    g_hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, NULL,
+                             ForegroundHook, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+    SetTimer(g_msg, TIMER_SCAN, 300, NULL);
     Scan();
     if (g_set.autoUpdate) UpdateCheckAsync(ShellHwnd(), TRUE);
 
@@ -254,6 +270,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmd, int show)
     }
 
     KillTimer(g_msg, TIMER_SCAN);
+    if (g_hook) UnhookWinEvent(g_hook);
     UnregisterHotKey(g_msg, HOTKEY_ID);
     TrayShow(FALSE);
     CfgSave();

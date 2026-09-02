@@ -34,8 +34,8 @@ static void WriteCh(FILE* f, const Crosshair* c)
              c->style, (unsigned)c->color, (unsigned)c->outlineColor);
     fwprintf(f, L"length %d\nthickness %d\ngap %d\ndotSize %d\n",
              c->length, c->thickness, c->gap, c->dotSize);
-    fwprintf(f, L"centerDot %d\noutline %d\nopacity %d\noffsetX %d\noffsetY %d\n",
-             c->centerDot, c->outline, c->opacity, c->offsetX, c->offsetY);
+    fwprintf(f, L"centerDot %d\noutline %d\nopacity %d\nglow %d\noffsetX %d\noffsetY %d\n",
+             c->centerDot, c->outline, c->opacity, c->glow, c->offsetX, c->offsetY);
     fwprintf(f, L"gridW %d\ngridH %d\npxScale %d\nimageScale %d\n",
              c->gridW, c->gridH, c->pxScale, c->imageScale);
     if (c->image[0]) fwprintf(f, L"image %s\n", c->image);
@@ -77,6 +77,7 @@ static int ReadChLine(Crosshair* c, const wchar_t* line)
     else if (!wcscmp(key, L"centerDot"))  c->centerDot = !!a;
     else if (!wcscmp(key, L"outline"))    c->outline = !!a;
     else if (!wcscmp(key, L"opacity"))    c->opacity = Clamp(a, 10, 255);
+    else if (!wcscmp(key, L"glow"))       c->glow = Clamp(a, 0, 100);
     else if (!wcscmp(key, L"offsetX"))    c->offsetX = Clamp(a, -200, 200);
     else if (!wcscmp(key, L"offsetY"))    c->offsetY = Clamp(a, -200, 200);
     else if (!wcscmp(key, L"gridW"))      c->gridW = Clamp(a, 8, MAXGRID);
@@ -98,8 +99,8 @@ void CfgSave(void)
     fwprintf(f, L"overlayOn %d\nonlyInGame %d\nautoDetect %d\nautoOpen %d\nstartWin %d\n",
              g_set.overlayOn, g_set.onlyInGame, g_set.autoDetect,
              g_set.autoOpenPanel, g_set.startWithWindows);
-    fwprintf(f, L"autoUpdate %d\npreviewEnv %d\npreviewZoom %d\n",
-             g_set.autoUpdate, g_set.previewEnv, g_set.previewZoom);
+    fwprintf(f, L"autoUpdate %d\npreviewEnv %d\npreviewZoom %d\naccent %d\n",
+             g_set.autoUpdate, g_set.previewEnv, g_set.previewZoom, g_set.accent);
 
     fwprintf(f, L"[crosshair]\n");
     WriteCh(f, &g_ch);
@@ -187,6 +188,7 @@ void CfgLoad(void)
             else if (!wcscmp(key, L"startWin"))   g_set.startWithWindows = !!v;
             else if (!wcscmp(key, L"autoUpdate")) g_set.autoUpdate = !!v;
             else if (!wcscmp(key, L"previewEnv")) g_set.previewEnv = Clamp(v, 0, 4);
+            else if (!wcscmp(key, L"accent"))     g_set.accent = Clamp(v, 0, 5);
             else if (!wcscmp(key, L"previewZoom")) g_set.previewZoom = Clamp(v, 1, 8);
         }
     }

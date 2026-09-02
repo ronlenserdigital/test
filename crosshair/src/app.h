@@ -7,8 +7,8 @@
 
 #define APP_NAME    L"DEADCENTER"
 #define APP_ID      L"DeadCenter"
-#define APP_VER     L"1.0.0"
-#define APP_VERNUM  10000
+#define APP_VER     L"1.1.0"
+#define APP_VERNUM  10100
 #define APP_CLASS   L"DeadCenterShell"
 #define OV_CLASS    L"DeadCenterOverlay"
 #define MSG_CLASS   L"DeadCenterMsg"
@@ -33,6 +33,7 @@ struct Crosshair {
     int      length, thickness, gap, dotSize;
     int      centerDot, outline;
     int      opacity;                 // 0..255
+    int      glow;                    // bloom 0..100
     int      offsetX, offsetY;
     int      gridW, gridH, pxScale;   // pixel-editor layer
     uint32_t px[MAXGRID * MAXGRID];
@@ -50,6 +51,7 @@ struct Profile {
 
 struct Settings {
     int overlayOn, onlyInGame, autoDetect, autoOpenPanel, startWithWindows;
+    int accent;           // theme accent index
     int autoUpdate;
     int previewEnv;       // 0 dark 1 light 2 grass 3 sky 4 concrete
     int previewZoom;      // 1,2,4
@@ -74,6 +76,12 @@ void ChDropImage(void);
 void ChDefault(Crosshair* c, int preset);
 int  ChPresetCount(void);
 const wchar_t* ChPresetName(int i);
+
+// ---- capture.cpp
+void CapPoll(HWND gameWnd);                 // grab a frame while the game has focus
+const uint32_t* CapFrame(int* w, int* h);   // last good frame, NULL if none
+BOOL CapHasFrame(void);
+void CapClear(void);
 
 // ---- config.cpp
 void CfgLoad(void);
@@ -101,6 +109,7 @@ void ShellShow(BOOL show);
 BOOL ShellVisible(void);
 void ShellToggle(void);
 void ShellStatus(const wchar_t* s);
+void ShellGameChanged(void);
 void ShellRedraw(void);
 void ShellApply(void);
 HWND ShellHwnd(void);                     // crosshair changed -> overlay + save
