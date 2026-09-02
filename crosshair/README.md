@@ -1,48 +1,61 @@
-# PixelCross
+# DEADCENTER
 
-A ~105 KB native Windows crosshair overlay. No installer, no runtime, no Electron.
-One `.exe`, one text config file. Draw your own crosshair pixel by pixel or upload
-an image — either one is centred exactly on the monitor the game is running on,
-at whatever resolution it is running at.
+**Precision. Your way.**
+
+A ~200 KB native Windows crosshair overlay. No installer, no runtime, no Electron.
+One `.exe`, one text config. It detects your game, pins a crosshair to the exact
+centre pixel of the monitor that game is on, and gets out of the way.
 
 ## Why it is tiny
 
-Pure Win32 + GDI, statically linked, no framework. Most crosshair apps ship an
-Electron or .NET runtime (100–300 MB). This is a single file:
+Pure Win32 + GDI, statically linked, no framework.
 
-| App type            | On disk   |
-|---------------------|-----------|
-| Electron crosshair  | ~200 MB   |
-| .NET crosshair      | ~70 MB    |
-| **PixelCross**      | **~0.1 MB** |
+| App type            | On disk     |
+|---------------------|-------------|
+| Electron crosshair  | ~200 MB     |
+| .NET crosshair      | ~70 MB      |
+| **DEADCENTER**      | **~0.2 MB** |
 
-Runtime memory is a few MB, and the overlay bitmap is only as large as the
-crosshair itself — not the screen.
+## What it does
 
-## Features
+**Home** — the active crosshair on a live preview, its profile, and your saved library.
 
-- **Auto game detection.** Polls the foreground window 2.5x/sec. Any process in
-  your game list, or (optionally) any app running true fullscreen/borderless,
-  turns the overlay on. Everything else turns it off.
-- **Exact centering.** The overlay follows the monitor the game is on, reads that
-  monitor's real resolution, and pins the crosshair's aim pixel to the screen's
-  centre pixel. Per-monitor DPI aware, so scaled displays stay pixel-exact.
-- **Pixel editor.** 16x16 up to 64x64 canvas. Pen, eraser, flood fill, line,
-  rectangle, ellipse, X/Y mirror, undo (Ctrl+Z), 16-colour palette plus a full
-  colour picker, per-colour alpha. Presets: dot, cross, T, circle, chevron.
-- **Image crosshairs.** Upload PNG/BMP/JPG/GIF (alpha preserved), scale 10–400%,
-  centred the same way.
-- **Live tuning.** Pixel size, master opacity, X/Y nudge — all applied instantly.
-- **Window controls.** `HIDE` makes the app vanish completely (window + tray icon).
-  `F12` brings it back — the hint is printed in the title bar. Also `MIN` and
-  `CLOSE`, plus a tray icon and Esc to hide.
-- **Click-through.** The overlay is layered + transparent + no-activate, so it
-  never steals a click or focus from the game.
-- **Start with Windows** toggle — launches silently to the tray.
+**Design** — three modes so the complexity is opt-in:
+- **Basic**: style (cross / dot / T / circle / chevron), colour, length, thickness,
+  gap, opacity, centre dot, outline. Colour changes apply instantly.
+- **Advanced**: centre-dot size, X/Y offset, outline colour, custom image upload
+  (PNG/BMP/JPG/GIF, alpha preserved, 10–400% scaling).
+- **Pixel Editor**: 16–48px canvas with pen, eraser, flood fill, line, rect,
+  ellipse, X/Y mirror and undo — hidden one layer deep, where it belongs.
+
+Preview environments (Dark / Light / Grass / Sky / Concrete) and 1x/2x/4x zoom
+let you check visibility before you load in. Eight presets sit under the canvas.
+
+**Game Profiles** — every game remembers its own crosshair and resolution, and
+DEADCENTER switches automatically the moment that game takes focus.
+
+**Settings** — overlay rules, auto-detect, start with Windows, and automatic
+update checks.
+
+## Controls
+
+- **F12** anywhere hides or brings back the window (printed in the title bar).
+- **HIDE** removes the window *and* the tray icon — the app vanishes completely.
+- **MIN** / **×**, tray icon with right-click menu, Esc to hide.
+- The overlay is layered, click-through and no-activate: it never steals a click
+  or focus from the game.
+
+## Automatic updates
+
+On launch DEADCENTER reads `crosshair/latest.json` from this repo. If the version
+there is newer than the running build it offers a one-click download and swap
+(Settings → Download & Install). Cutting a `v*` tag builds the exe and attaches it
+to a GitHub release, which is what `latest.json` points at — so shipping an update
+is: bump `latest.json`, tag, push.
 
 ## Build
 
-**Windows (MSVC).** Open *x64 Native Tools Command Prompt* in this folder:
+**Windows (MSVC)** — *x64 Native Tools Command Prompt* in this folder:
 
 ```
 build.bat
@@ -55,25 +68,23 @@ sudo apt install g++-mingw-w64-x86-64
 ./build.sh
 ```
 
-Output: `build/PixelCross.exe`. GitHub Actions builds it on every push and
-uploads the exe as an artifact.
+Output: `build/DeadCenter.exe`.
 
 ## Use
 
-1. Run `PixelCross.exe`. The panel opens and a tray icon appears.
-2. Draw a crosshair, or click **UPLOAD IMAGE**.
-3. Launch your game. The overlay appears by itself.
-4. Not detected? Alt-tab out, press **F12**, click **ADD DETECTED GAME** — it is
-   remembered from then on.
-5. Press **HIDE** to make the app disappear. **F12** brings it back.
+1. Run `DeadCenter.exe`. The window opens and a tray icon appears.
+2. Design → pick a preset, set your colour, tune it against a preview environment.
+3. Launch your game **in borderless windowed** — exclusive fullscreen hides every
+   overlay on Windows, not just this one.
+4. Not detected? Alt-tab out, F12, Game Profiles → **ADD**. It is remembered and
+   auto-switches from then on.
 
-Settings live in `%APPDATA%\PixelCross\config.txt` (a few KB of plain text).
+Settings live in `%APPDATA%\DeadCenter\config.txt`.
 
 ## Anti-cheat note
 
-PixelCross does not touch the game process — no injection, no hooks, no memory
-reads. It is a normal transparent window drawn by Windows on top. That is the
-same technique monitor-bezel and streaming overlays use. Even so, some
-competitive titles ban third-party crosshairs by policy, and exclusive-fullscreen
-mode hides all overlays: run the game in **borderless windowed** if you want the
-overlay visible. Check the rules for your game before using it online.
+DEADCENTER does not touch the game process — no injection, no hooks, no memory
+reads. It is a normal transparent window drawn by Windows on top, the same
+technique streaming and monitor overlays use. Even so, some competitive titles
+ban third-party crosshairs by policy. Check the rules for your game before using
+it online.

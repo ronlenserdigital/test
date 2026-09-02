@@ -5,17 +5,15 @@
 #include <wchar.h>
 
 HINSTANCE g_inst = NULL;
-wchar_t   g_lastGame[64] = L"";
 
-static HWND           g_msgWnd = NULL;
+static HWND            g_msg = NULL;
 static NOTIFYICONDATAW g_nid;
-static BOOL           g_trayOn = FALSE;
-static BOOL           g_inGame = FALSE;
-static wchar_t        g_selfExe[64] = L"";
+static BOOL            g_trayOn = FALSE;
+static BOOL            g_inGame = FALSE;
+static wchar_t         g_selfExe[64] = L"";
 
 #define TIMER_SCAN 1
 
-// windows that are fullscreen but are not games
 static const wchar_t* kIgnore[] = {
     L"explorer.exe", L"searchhost.exe", L"searchui.exe", L"shellexperiencehost.exe",
     L"applicationframehost.exe", L"startmenuexperiencehost.exe", L"taskmgr.exe",
@@ -25,8 +23,7 @@ static const wchar_t* kIgnore[] = {
 static BOOL Ignored(const wchar_t* exe)
 {
     if (!_wcsicmp(exe, g_selfExe)) return TRUE;
-    for (int i = 0; kIgnore[i]; i++)
-        if (!_wcsicmp(exe, kIgnore[i])) return TRUE;
+    for (int i = 0; kIgnore[i]; i++) if (!_wcsicmp(exe, kIgnore[i])) return TRUE;
     return FALSE;
 }
 
@@ -42,8 +39,8 @@ static BOOL ForegroundExe(HWND fg, wchar_t* out, int cch)
     BOOL ok = QueryFullProcessImageNameW(h, 0, path, &n);
     CloseHandle(h);
     if (!ok) return FALSE;
-    const wchar_t* base = wcsrchr(path, L'\\');
-    wcsncpy(out, base ? base + 1 : path, cch - 1);
+    const wchar_t* b = wcsrchr(path, L'\\');
+    wcsncpy(out, b ? b + 1 : path, cch - 1);
     out[cch - 1] = 0;
     return TRUE;
 }
@@ -57,7 +54,6 @@ static BOOL IsFullscreen(HWND fg)
     MONITORINFO mi; mi.cbSize = sizeof(mi);
     if (!GetMonitorInfoW(hm, &mi)) return FALSE;
     RECT m = mi.rcMonitor;
-    // allow a couple of pixels of slop for borderless windows
     return wr.left <= m.left + 2 && wr.top <= m.top + 2 &&
            wr.right >= m.right - 2 && wr.bottom >= m.bottom - 2;
 }
@@ -67,30 +63,41 @@ static void Scan(void)
     HWND fg = GetForegroundWindow();
     wchar_t exe[64] = L"";
     BOOL game = FALSE;
+    int prof = -1;
 
     if (fg && ForegroundExe(fg, exe, 64) && !Ignored(exe)) {
-        if (GameListHas(exe))                            game = TRUE;
-        else if (g_cfg.autoDetect && IsFullscreen(fg))    game = TRUE;
+        prof = ProfileFind(exe);
+        if (prof >= 0) game = TRUE;
+        else if (g_set.autoDetect && IsFullscreen(fg)) game = TRUE;
         if (game) wcsncpy(g_lastGame, exe, 63);
     }
 
     if (game) OverlaySetMonitorFrom(fg);
 
-    BOOL want = g_cfg.overlayOn && (game || !g_cfg.onlyInGame);
-    OverlaySetVisible(want);
+    // auto-switch to the profile that owns this game
+    if (game && prof >= 0 && g_prof[prof].autoLaunch && prof != g_activeProfile) {
+        g_activeProfile = prof;
+        memcpy(&g_ch, &g_prof[prof].ch, sizeof(Crosshair));
+        wcsncpy(g_activeLabel, g_prof[prof].label, 63);
+        g_activeLabel[63] = 0;
+        OverlayResolution(&g_prof[prof].lastW, &g_prof[prof].lastH);
+        OverlayRefresh();
+        ShellRedraw();
+    }
+
+    OverlaySetVisible(g_set.overlayOn && (game || !g_set.onlyInGame));
 
     if (game != g_inGame) {
         g_inGame = game;
         wchar_t s[160];
         if (game) {
-            _snwprintf(s, 160, L"Game detected: %s  \x2014  overlay ACTIVE", g_lastGame);
-            if (g_cfg.autoOpenPanel) { TrayShow(TRUE); PanelShow(TRUE); }
+            _snwprintf(s, 160, L"%s detected \x2014 overlay active", g_lastGame);
+            if (g_set.autoOpenPanel) { TrayShow(TRUE); ShellShow(TRUE); }
         } else {
-            wcscpy(s, g_cfg.onlyInGame ? L"No game in focus - overlay hidden."
-                                       : L"No game in focus - overlay always on.");
+            wcscpy(s, g_set.onlyInGame ? L"Waiting for a game..." : L"Overlay always on.");
         }
         s[159] = 0;
-        PanelStatus(s);
+        ShellStatus(s);
     }
 }
 
@@ -112,10 +119,10 @@ static HICON MakeIcon(void)
 
     unsigned* p = (unsigned*)bits;
     memset(p, 0, N * N * 4);
-    for (int i = 0; i < N; i++) {
-        if (i > 12 && i < 19) continue;                 // centre gap
-        p[15 * N + i] = 0xFF00E08A; p[16 * N + i] = 0xFF00E08A;
-        p[i * N + 15] = 0xFF00E08A; p[i * N + 16] = 0xFF00E08A;
+    for (int i = 2; i < N - 2; i++) {
+        if (i > 12 && i < 19) continue;
+        p[15 * N + i] = 0xFF00F5A0; p[16 * N + i] = 0xFF00F5A0;
+        p[i * N + 15] = 0xFF00F5A0; p[i * N + 16] = 0xFF00F5A0;
     }
     p[15 * N + 15] = p[15 * N + 16] = p[16 * N + 15] = p[16 * N + 16] = 0xFFFFFFFF;
 
@@ -134,11 +141,11 @@ void TrayShow(BOOL show)
     if (show) {
         ZeroMemory(&g_nid, sizeof(g_nid));
         g_nid.cbSize = sizeof(g_nid);
-        g_nid.hWnd   = g_msgWnd;
-        g_nid.uID    = 1;
+        g_nid.hWnd = g_msg;
+        g_nid.uID = 1;
         g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         g_nid.uCallbackMessage = WM_TRAY;
-        g_nid.hIcon  = MakeIcon();
+        g_nid.hIcon = MakeIcon();
         wcscpy(g_nid.szTip, APP_NAME L" - F12 to show/hide");
         Shell_NotifyIconW(NIM_ADD, &g_nid);
     } else {
@@ -149,7 +156,7 @@ void TrayShow(BOOL show)
 
 void AppExit(void)
 {
-    CfgSave(&g_cfg);
+    CfgSave();
     TrayShow(FALSE);
     OverlaySetVisible(FALSE);
     PostQuitMessage(0);
@@ -159,34 +166,32 @@ static void TrayMenu(void)
 {
     POINT pt; GetCursorPos(&pt);
     HMENU m = CreatePopupMenu();
-    AppendMenuW(m, MF_STRING, 1, L"Show panel (F12)");
-    AppendMenuW(m, MF_STRING | (g_cfg.overlayOn ? MF_CHECKED : 0), 2, L"Overlay enabled");
+    AppendMenuW(m, MF_STRING, 1, L"Open DEADCENTER (F12)");
+    AppendMenuW(m, MF_STRING | (g_set.overlayOn ? MF_CHECKED : 0), 2, L"Overlay enabled");
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING, 3, L"Exit");
-    SetForegroundWindow(g_msgWnd);
-    int c = TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x, pt.y, 0, g_msgWnd, NULL);
+    SetForegroundWindow(g_msg);
+    int c = TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x, pt.y, 0, g_msg, NULL);
     DestroyMenu(m);
-    if (c == 1) PanelShow(TRUE);
-    else if (c == 2) { g_cfg.overlayOn = !g_cfg.overlayOn; CfgSave(&g_cfg); OverlaySetVisible(g_cfg.overlayOn && g_inGame); PanelRedraw(); }
-    else if (c == 3) AppExit();
+    if (c == 1) ShellShow(TRUE);
+    else if (c == 2) {
+        g_set.overlayOn = !g_set.overlayOn;
+        CfgSave();
+        OverlaySetVisible(g_set.overlayOn && g_inGame);
+        ShellRedraw();
+    } else if (c == 3) AppExit();
 }
 
 static LRESULT CALLBACK MsgProc(HWND h, UINT m, WPARAM w, LPARAM l)
 {
     switch (m) {
-    case WM_TIMER:
-        if (w == TIMER_SCAN) Scan();
-        return 0;
-    case WM_HOTKEY:
-        if (w == HOTKEY_ID) PanelToggle();
-        return 0;
+    case WM_TIMER:  if (w == TIMER_SCAN) Scan(); return 0;
+    case WM_HOTKEY: if (w == HOTKEY_ID) ShellToggle(); return 0;
     case WM_TRAY:
-        if (l == WM_LBUTTONUP || l == WM_LBUTTONDBLCLK) PanelShow(TRUE);
+        if (l == WM_LBUTTONUP || l == WM_LBUTTONDBLCLK) ShellShow(TRUE);
         else if (l == WM_RBUTTONUP) TrayMenu();
         return 0;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
+    case WM_DESTROY: PostQuitMessage(0); return 0;
     }
     return DefWindowProcW(h, m, w, l);
 }
@@ -196,23 +201,21 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmd, int show)
     (void)prev; (void)show;
     g_inst = inst;
 
-    // pixel-exact overlay placement on scaled / multi-monitor setups
-    {
-        typedef BOOL (WINAPI *PFN_CTX)(HANDLE);
+    {   // pixel-exact placement on scaled / multi-monitor setups
+        typedef BOOL (WINAPI *PFN)(HANDLE);
         HMODULE u = GetModuleHandleW(L"user32.dll");
-        PFN_CTX setCtx = u ? (PFN_CTX)(void*)GetProcAddress(u, "SetProcessDpiAwarenessContext") : NULL;
-        if (!setCtx || !setCtx((HANDLE)-4))   // PER_MONITOR_AWARE_V2
-            SetProcessDPIAware();
+        PFN f = u ? (PFN)(void*)GetProcAddress(u, "SetProcessDpiAwarenessContext") : NULL;
+        if (!f || !f((HANDLE)-4)) SetProcessDPIAware();
     }
 
-    HANDLE mtx = CreateMutexW(NULL, TRUE, L"PixelCross_SingleInstance");
+    HANDLE mtx = CreateMutexW(NULL, TRUE, L"DeadCenter_SingleInstance");
     if (mtx && GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND other = FindWindowW(APP_CLASS, NULL);
         if (other) { ShowWindow(other, SW_SHOW); SetForegroundWindow(other); }
         return 0;
     }
 
-    {   // our own exe name, so auto-detect never targets us
+    {
         wchar_t self[MAX_PATH];
         GetModuleFileNameW(NULL, self, MAX_PATH);
         const wchar_t* b = wcsrchr(self, L'\\');
@@ -220,28 +223,29 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmd, int show)
         g_selfExe[63] = 0;
     }
 
-    CfgLoad(&g_cfg);
+    CfgLoad();
 
     WNDCLASSEXW wc;
     ZeroMemory(&wc, sizeof(wc));
     wc.cbSize = sizeof(wc);
     wc.lpfnWndProc = MsgProc;
     wc.hInstance = inst;
-    wc.lpszClassName = L"PixelCrossMsg";
+    wc.lpszClassName = MSG_CLASS;
     RegisterClassExW(&wc);
-    g_msgWnd = CreateWindowExW(0, L"PixelCrossMsg", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, inst, NULL);
+    g_msg = CreateWindowExW(0, MSG_CLASS, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, inst, NULL);
 
-    if (!OverlayCreate() || !PanelCreate()) return 1;
+    if (!OverlayCreate() || !ShellCreate()) return 1;
 
-    if (!RegisterHotKey(g_msgWnd, HOTKEY_ID, 0, VK_F12))
-        PanelStatus(L"F12 is taken by another app - use the tray icon.");
+    if (!RegisterHotKey(g_msg, HOTKEY_ID, 0, VK_F12))
+        ShellStatus(L"F12 is taken - use the tray icon.");
 
     BOOL silent = (cmd && wcsstr(cmd, L"/tray") != NULL);
     TrayShow(TRUE);
-    if (!silent) PanelShow(TRUE);
+    if (!silent) ShellShow(TRUE);
 
-    SetTimer(g_msgWnd, TIMER_SCAN, 400, NULL);
+    SetTimer(g_msg, TIMER_SCAN, 400, NULL);
     Scan();
+    if (g_set.autoUpdate) UpdateCheckAsync(ShellHwnd(), TRUE);
 
     MSG msg;
     while (GetMessageW(&msg, NULL, 0, 0) > 0) {
@@ -249,9 +253,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmd, int show)
         DispatchMessageW(&msg);
     }
 
-    KillTimer(g_msgWnd, TIMER_SCAN);
-    UnregisterHotKey(g_msgWnd, HOTKEY_ID);
+    KillTimer(g_msg, TIMER_SCAN);
+    UnregisterHotKey(g_msg, HOTKEY_ID);
     TrayShow(FALSE);
-    CfgSave(&g_cfg);
+    CfgSave();
     return 0;
 }
