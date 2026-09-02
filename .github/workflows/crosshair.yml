@@ -1,0 +1,23 @@
+name: Build PixelCross
+
+on:
+  push:
+    paths: ['crosshair/**', '.github/workflows/crosshair.yml']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: crosshair
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Build
+        shell: cmd
+        run: build.bat
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PixelCross
+          path: crosshair/build/PixelCross.exe
