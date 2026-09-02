@@ -250,3 +250,95 @@ void Icon(HDC dc, int id, int cx, int cy, int r, COLORREF col)
     SelectObject(dc, ob);
     DeleteObject(pen);
 }
+
+// ---------------------------------------------------------------- brand mark
+static int  B_cx, B_cy, B_r;
+static HDC  B_dc;
+
+static POINT BP(double x, double y)
+{
+    POINT p;
+    p.x = B_cx + (int)(x * B_r / 100.0 + (x < 0 ? -0.5 : 0.5));
+    p.y = B_cy + (int)(y * B_r / 100.0 + (y < 0 ? -0.5 : 0.5));
+    return p;
+}
+
+static void BFillPoly(const double* pts, int n, COLORREF c)
+{
+    POINT p[16];
+    if (n > 16) n = 16;
+    for (int i = 0; i < n; i++) p[i] = BP(pts[i * 2], pts[i * 2 + 1]);
+    HBRUSH b = CreateSolidBrush(c);
+    HPEN   pn = CreatePen(PS_SOLID, 1, c);
+    HGDIOBJ ob = SelectObject(B_dc, b), op = SelectObject(B_dc, pn);
+    Polygon(B_dc, p, n);
+    SelectObject(B_dc, ob); SelectObject(B_dc, op);
+    DeleteObject(b); DeleteObject(pn);
+}
+
+// rotate a polygon by 90 degrees `q` times, then fill it
+static void BFillRot(const double* pts, int n, int q, COLORREF c)
+{
+    double buf[32];
+    for (int i = 0; i < n && i < 16; i++) {
+        double x = pts[i * 2], y = pts[i * 2 + 1];
+        for (int k = 0; k < q; k++) { double t = x; x = -y; y = t; }
+        buf[i * 2] = x; buf[i * 2 + 1] = y;
+    }
+    BFillPoly(buf, n, c);
+}
+
+static void BRing(double rad, int width, COLORREF c)
+{
+    HPEN p = CreatePen(PS_SOLID, width < 1 ? 1 : width, c);
+    HGDIOBJ op = SelectObject(B_dc, p), ob = SelectObject(B_dc, GetStockObject(NULL_BRUSH));
+    POINT a = BP(-rad, -rad), b = BP(rad, rad);
+    Ellipse(B_dc, a.x, a.y, b.x, b.y);
+    SelectObject(B_dc, op); SelectObject(B_dc, ob);
+    DeleteObject(p);
+}
+
+static void BDisc(double rad, COLORREF c)
+{
+    HBRUSH br = CreateSolidBrush(c);
+    HPEN   pn = CreatePen(PS_SOLID, 1, c);
+    HGDIOBJ ob = SelectObject(B_dc, br), op = SelectObject(B_dc, pn);
+    POINT a = BP(-rad, -rad), b = BP(rad, rad);
+    Ellipse(B_dc, a.x, a.y, b.x, b.y);
+    SelectObject(B_dc, ob); SelectObject(B_dc, op);
+    DeleteObject(br); DeleteObject(pn);
+}
+
+void BrandMark(HDC dc, int cx, int cy, int r, COLORREF neon, COLORREF dark)
+{
+    B_dc = dc; B_cx = cx; B_cy = cy; B_r = r;
+    int hair = r >= 26 ? 2 : 1;
+    int band = r >= 40 ? 4 : r >= 22 ? 3 : 2;
+
+    // one arm, pointing up: plate + neon core + spearhead. Repeated x4.
+    static const double armPlate[] = {
+        -20,-52,  -20,-84,   0,-104,   20,-84,   20,-52,   9,-52,   9,-30,  -9,-30,  -9,-52
+    };
+    static const double armCore[] = {
+        -8,-46,   -8,-80,    0,-94,    8,-80,    8,-46
+    };
+    // the outer bezel notch that sits between the arms
+    static const double notch[] = { -52,-70,  -30,-52,  -52,-34 };
+
+    for (int q = 0; q < 4; q++) BFillRot(armPlate, 9, q, dark);
+    for (int q = 0; q < 4; q++) BFillRot(notch, 3, q, dark);
+
+    BRing(84, band, dark);                  // heavy outer bezel
+    BRing(62, hair, dark);
+    BRing(84, hair, neon);                  // neon edge on the bezel
+    BRing(70, band - 1 > 0 ? band - 1 : 1, neon);   // inner neon ring
+
+    for (int q = 0; q < 4; q++) BFillRot(armCore, 5, q, neon);
+
+    BDisc(24, dark);                        // hub
+    BRing(24, hair + 1, neon);
+
+    // four-point star in the hub
+    static const double star[] = { 0,-15,  4,-4,  15,0,  4,4,  0,15,  -4,4,  -15,0,  -4,-4 };
+    BFillPoly(star, 8, neon);
+}

@@ -7,8 +7,8 @@
 
 #define APP_NAME    L"DEADCENTER"
 #define APP_ID      L"DeadCenter"
-#define APP_VER     L"1.2.1"
-#define APP_VERNUM  10201
+#define APP_VER     L"1.3.0"
+#define APP_VERNUM  10300
 #define APP_CLASS   L"DeadCenterShell"
 #define OV_CLASS    L"DeadCenterOverlay"
 #define MSG_CLASS   L"DeadCenterMsg"
@@ -34,6 +34,10 @@ struct Crosshair {
     int      centerDot, outline;
     int      opacity;                 // 0..255
     int      glow;                    // bloom 0..100
+    int      gradient;                // blend color -> gradColor down the glyph
+    uint32_t gradColor;
+    int      shadow;                  // drop shadow 0..100
+    int      shadowX, shadowY;
     int      offsetX, offsetY;
     int      gridW, gridH, pxScale;   // pixel-editor layer
     uint32_t px[MAXGRID * MAXGRID];
@@ -51,7 +55,10 @@ struct Profile {
 
 struct Settings {
     int overlayOn, onlyInGame, autoDetect, autoOpenPanel, startWithWindows;
-    int accent;           // theme accent index
+    int accent;            // theme accent index
+    int glass;             // translucent acrylic window
+    int previewEnv;        // 0 dark 1 arena 2 grass 3 sky 4 custom image
+    wchar_t previewImage[MAX_PATH];
     int autoUpdate;
     int previewZoom;      // 1,2,4
 };
@@ -72,6 +79,10 @@ struct ChBitmap { uint32_t* px; int w, h, ax, ay; };   // straight ARGB, ax/ay =
 BOOL ChBuild(const Crosshair* c, ChBitmap* out);
 void ChFree(ChBitmap* b);
 void ChDropImage(void);
+BOOL ChBackdrop(const wchar_t* path, const uint32_t** px, int* w, int* h);
+void ChDropBackdrop(void);
+const wchar_t* PrettyGameName(const wchar_t* exe);
+uint32_t GameBrandColor(const wchar_t* exe);
 void ChDefault(Crosshair* c, int preset);
 int  ChPresetCount(void);
 const wchar_t* ChPresetName(int i);

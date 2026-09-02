@@ -36,6 +36,8 @@ static void WriteCh(FILE* f, const Crosshair* c)
              c->length, c->thickness, c->gap, c->dotSize);
     fwprintf(f, L"centerDot %d\noutline %d\nopacity %d\nglow %d\noffsetX %d\noffsetY %d\n",
              c->centerDot, c->outline, c->opacity, c->glow, c->offsetX, c->offsetY);
+    fwprintf(f, L"gradient %d\ngradColor %08X\nshadow %d\nshadowX %d\nshadowY %d\n",
+             c->gradient, (unsigned)c->gradColor, c->shadow, c->shadowX, c->shadowY);
     fwprintf(f, L"gridW %d\ngridH %d\npxScale %d\nimageScale %d\n",
              c->gridW, c->gridH, c->pxScale, c->imageScale);
     if (c->image[0]) fwprintf(f, L"image %s\n", c->image);
@@ -64,8 +66,10 @@ static int ReadChLine(Crosshair* c, const wchar_t* line)
         return 1;
     }
     if (swscanf(line, L"%63s %x", key, &u) == 2 &&
-        (!wcscmp(key, L"color") || !wcscmp(key, L"outlineColor"))) {
-        if (!wcscmp(key, L"color")) c->color = u; else c->outlineColor = u;
+        (!wcscmp(key, L"color") || !wcscmp(key, L"outlineColor") || !wcscmp(key, L"gradColor"))) {
+        if (!wcscmp(key, L"color")) c->color = u;
+        else if (!wcscmp(key, L"gradColor")) c->gradColor = u;
+        else c->outlineColor = u;
         return 1;
     }
     if (swscanf(line, L"%63s %d", key, &a) != 2) return 0;
@@ -78,6 +82,10 @@ static int ReadChLine(Crosshair* c, const wchar_t* line)
     else if (!wcscmp(key, L"outline"))    c->outline = !!a;
     else if (!wcscmp(key, L"opacity"))    c->opacity = Clamp(a, 10, 255);
     else if (!wcscmp(key, L"glow"))       c->glow = Clamp(a, 0, 100);
+    else if (!wcscmp(key, L"gradient"))   c->gradient = !!a;
+    else if (!wcscmp(key, L"shadow"))     c->shadow = Clamp(a, 0, 100);
+    else if (!wcscmp(key, L"shadowX"))    c->shadowX = Clamp(a, -8, 8);
+    else if (!wcscmp(key, L"shadowY"))    c->shadowY = Clamp(a, -8, 8);
     else if (!wcscmp(key, L"offsetX"))    c->offsetX = Clamp(a, -200, 200);
     else if (!wcscmp(key, L"offsetY"))    c->offsetY = Clamp(a, -200, 200);
     else if (!wcscmp(key, L"gridW"))      c->gridW = Clamp(a, 8, MAXGRID);
@@ -99,8 +107,9 @@ void CfgSave(void)
     fwprintf(f, L"overlayOn %d\nonlyInGame %d\nautoDetect %d\nautoOpen %d\nstartWin %d\n",
              g_set.overlayOn, g_set.onlyInGame, g_set.autoDetect,
              g_set.autoOpenPanel, g_set.startWithWindows);
-    fwprintf(f, L"autoUpdate %d\npreviewZoom %d\naccent %d\n",
-             g_set.autoUpdate, g_set.previewZoom, g_set.accent);
+    fwprintf(f, L"autoUpdate %d\npreviewZoom %d\naccent %d\nglass %d\npreviewEnv %d\n",
+             g_set.autoUpdate, g_set.previewZoom, g_set.accent, g_set.glass, g_set.previewEnv);
+    if (g_set.previewImage[0]) fwprintf(f, L"previewImage %s\n", g_set.previewImage);
 
     fwprintf(f, L"[crosshair]\n");
     WriteCh(f, &g_ch);
@@ -125,7 +134,7 @@ void CfgLoad(void)
 {
     ZeroMemory(&g_set, sizeof(g_set));
     g_set.overlayOn = 1; g_set.onlyInGame = 1; g_set.autoDetect = 1;
-    g_set.autoUpdate = 1; g_set.previewZoom = 2;
+    g_set.autoUpdate = 1; g_set.previewZoom = 2; g_set.glass = 1; g_set.previewEnv = 0;
     ZeroMemory(g_libUsed, sizeof(g_libUsed));
     g_nprof = 0;
     ChDefault(&g_ch, 0);
@@ -177,6 +186,13 @@ void CfgLoad(void)
             if (swscanf(line, L"res %d %d", &a, &b) == 2) { pcur->lastW = a; pcur->lastH = b; continue; }
         }
 
+        if (!wcsncmp(line, L"previewImage ", 13)) {
+            wcsncpy(g_set.previewImage, line + 13, MAX_PATH - 1);
+            g_set.previewImage[MAX_PATH - 1] = 0;
+            wchar_t* q = wcspbrk(g_set.previewImage, L"\r\n"); if (q) *q = 0;
+            continue;
+        }
+
         if (target && ReadChLine(target, line)) continue;
 
         wchar_t key[64]; int v;
@@ -188,6 +204,8 @@ void CfgLoad(void)
             else if (!wcscmp(key, L"startWin"))   g_set.startWithWindows = !!v;
             else if (!wcscmp(key, L"autoUpdate")) g_set.autoUpdate = !!v;
             else if (!wcscmp(key, L"accent"))     g_set.accent = Clamp(v, 0, 5);
+            else if (!wcscmp(key, L"glass"))      g_set.glass = !!v;
+            else if (!wcscmp(key, L"previewEnv")) g_set.previewEnv = Clamp(v, 0, 4);
             else if (!wcscmp(key, L"previewZoom")) g_set.previewZoom = Clamp(v, 1, 8);
         }
     }
@@ -229,18 +247,8 @@ int ProfileAdd(const wchar_t* exe)
     ZeroMemory(p, sizeof(*p));
     wcsncpy(p->exe, exe, 63); p->exe[63] = 0;
 
-    // pretty label: strip ".exe" and common suffixes
-    wcsncpy(p->label, exe, 39); p->label[39] = 0;
-    wchar_t* d = wcsrchr(p->label, L'.');
-    if (d) *d = 0;
-    wchar_t* cut = wcsstr(p->label, L"Client-Win64");
-    if (cut) *cut = 0;
-    cut = wcsstr(p->label, L"-Win64");
-    if (cut) *cut = 0;
-    size_t n = wcslen(p->label);
-    while (n && (p->label[n - 1] == L'-' || p->label[n - 1] == L'_')) p->label[--n] = 0;
-    if (!p->label[0]) wcsncpy(p->label, exe, 39);
-    if (p->label[0] >= L'a' && p->label[0] <= L'z') p->label[0] -= 32;
+    wcsncpy(p->label, PrettyGameName(exe), 39);
+    p->label[39] = 0;
 
     p->autoLaunch = 1;
     memcpy(&p->ch, &g_ch, sizeof(Crosshair));

@@ -1,4 +1,6 @@
 #include "app.h"
+#include "icons.h"
+#include "theme.h"
 #include <shellapi.h>
 #include <psapi.h>
 #include <stdio.h>
@@ -92,7 +94,7 @@ static void Scan(void)
         g_inGame = game;
         wchar_t s[160];
         if (game) {
-            _snwprintf(s, 160, L"%s \x2014 overlay active", g_lastGame);
+            _snwprintf(s, 160, L"%s \x2014 overlay active", PrettyGameName(g_lastGame));
             if (g_set.autoOpenPanel) { TrayShow(TRUE); ShellShow(TRUE); }
         } else {
             wcscpy(s, g_set.onlyInGame ? L"Waiting for a game" : L"Overlay always on");
@@ -123,19 +125,32 @@ static HICON MakeIcon(void)
     bi.bmiHeader.biCompression = BI_RGB;
 
     void* bits = NULL;
-    HDC dc = GetDC(NULL);
-    HBITMAP color = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, &bits, NULL, 0);
-    ReleaseDC(NULL, dc);
-    if (!color) return LoadIcon(NULL, IDI_APPLICATION);
+    HDC screen = GetDC(NULL);
+    HBITMAP color = CreateDIBSection(screen, &bi, DIB_RGB_COLORS, &bits, NULL, 0);
+    HDC mem = CreateCompatibleDC(screen);
+    ReleaseDC(NULL, screen);
+    if (!color || !mem) {
+        if (color) DeleteObject(color);
+        if (mem) DeleteDC(mem);
+        return LoadIcon(NULL, IDI_APPLICATION);
+    }
+    HGDIOBJ old = SelectObject(mem, color);
+
+    // GDI does not write alpha, so paint over a key colour and derive it after
+    const COLORREF KEY = RGB(255, 0, 255);
+    RECT all; SetRect(&all, 0, 0, N, N);
+    HBRUSH kb = CreateSolidBrush(KEY);
+    FillRect(mem, &all, kb);
+    DeleteObject(kb);
+
+    BrandMark(mem, N / 2, N / 2, N / 2 - 1, DC_CYAN, RGB(2, 22, 30));
 
     unsigned* p = (unsigned*)bits;
-    memset(p, 0, N * N * 4);
-    for (int i = 2; i < N - 2; i++) {
-        if (i > 12 && i < 19) continue;
-        p[15 * N + i] = 0xFF00F5A0; p[16 * N + i] = 0xFF00F5A0;
-        p[i * N + 15] = 0xFF00F5A0; p[i * N + 16] = 0xFF00F5A0;
-    }
-    p[15 * N + 15] = p[15 * N + 16] = p[16 * N + 15] = p[16 * N + 16] = 0xFFFFFFFF;
+    for (int i = 0; i < N * N; i++)
+        p[i] = ((p[i] & 0x00FFFFFF) == 0x00FF00FF) ? 0u : (p[i] | 0xFF000000u);
+
+    SelectObject(mem, old);
+    DeleteDC(mem);
 
     HBITMAP mask = CreateBitmap(N, N, 1, 1, NULL);
     ICONINFO ii;
@@ -157,7 +172,9 @@ void TrayShow(BOOL show)
         g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         g_nid.uCallbackMessage = WM_TRAY;
         g_nid.hIcon = MakeIcon();
-        wcscpy(g_nid.szTip, APP_NAME L" - F12 to show/hide");
+        _snwprintf(g_nid.szTip, 127, L"%s \x2014 %s \x2014 F12", APP_NAME,
+                   g_lastGame[0] ? PrettyGameName(g_lastGame) : L"no game");
+        g_nid.szTip[127] = 0;
         Shell_NotifyIconW(NIM_ADD, &g_nid);
     } else {
         Shell_NotifyIconW(NIM_DELETE, &g_nid);
@@ -246,6 +263,14 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmd, int show)
     g_msg = CreateWindowExW(0, MSG_CLASS, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, inst, NULL);
 
     if (!OverlayCreate() || !ShellCreate()) return 1;
+    {   // the window and alt-tab icons use the brand mark too
+        HICON ic = MakeIcon();
+        HWND sh = ShellHwnd();
+        if (ic && sh) {
+            SendMessageW(sh, WM_SETICON, ICON_SMALL, (LPARAM)ic);
+            SendMessageW(sh, WM_SETICON, ICON_BIG, (LPARAM)ic);
+        }
+    }
 
     if (!RegisterHotKey(g_msg, HOTKEY_ID, 0, VK_F12))
         ShellStatus(L"F12 is taken - use the tray icon.");

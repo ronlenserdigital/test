@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 #include <algorithm>
 using std::min;
 using std::max;
@@ -13,6 +14,17 @@ static int       g_imgW = 0, g_imgH = 0;
 static wchar_t   g_imgSrc[MAX_PATH] = L"";
 static ULONG_PTR g_gdip = 0;
 
+static uint32_t* g_bd = NULL;
+static int       g_bdW = 0, g_bdH = 0;
+static wchar_t   g_bdSrc[MAX_PATH] = L"";
+
+void ChDropBackdrop(void)
+{
+    if (g_bd) { free(g_bd); g_bd = NULL; }
+    g_bdW = g_bdH = 0;
+    g_bdSrc[0] = 0;
+}
+
 void ChDropImage(void)
 {
     if (g_img) { free(g_img); g_img = NULL; }
@@ -20,31 +32,103 @@ void ChDropImage(void)
     g_imgSrc[0] = 0;
 }
 
-static BOOL LoadImage32(const wchar_t* path)
+static BOOL LoadInto(const wchar_t* path, uint32_t** dst, int* dw, int* dh)
 {
     if (!path || !path[0]) return FALSE;
-    if (g_img && !wcscmp(g_imgSrc, path)) return TRUE;
-    ChDropImage();
     if (!g_gdip) { Gdiplus::GdiplusStartupInput in; Gdiplus::GdiplusStartup(&g_gdip, &in, NULL); }
 
     Gdiplus::Bitmap bmp(path, FALSE);
     if (bmp.GetLastStatus() != Gdiplus::Ok) return FALSE;
     int w = (int)bmp.GetWidth(), h = (int)bmp.GetHeight();
-    if (w <= 0 || h <= 0 || w > 4096 || h > 4096) return FALSE;
+    if (w <= 0 || h <= 0 || w > 8192 || h > 8192) return FALSE;
 
     Gdiplus::Rect rc(0, 0, w, h);
     Gdiplus::BitmapData bd;
     if (bmp.LockBits(&rc, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &bd) != Gdiplus::Ok)
         return FALSE;
-    g_img = (uint32_t*)malloc((size_t)w * h * 4);
-    if (g_img) {
+    uint32_t* buf = (uint32_t*)malloc((size_t)w * h * 4);
+    if (buf) {
         for (int y = 0; y < h; y++)
-            memcpy(g_img + (size_t)y * w, (BYTE*)bd.Scan0 + (size_t)y * bd.Stride, (size_t)w * 4);
-        g_imgW = w; g_imgH = h;
-        wcsncpy(g_imgSrc, path, MAX_PATH - 1);
+            memcpy(buf + (size_t)y * w, (BYTE*)bd.Scan0 + (size_t)y * bd.Stride, (size_t)w * 4);
+        *dst = buf; *dw = w; *dh = h;
     }
     bmp.UnlockBits(&bd);
-    return g_img != NULL;
+    return buf != NULL;
+}
+
+static BOOL LoadImage32(const wchar_t* path)
+{
+    if (!path || !path[0]) return FALSE;
+    if (g_img && !wcscmp(g_imgSrc, path)) return TRUE;
+    ChDropImage();
+    if (!LoadInto(path, &g_img, &g_imgW, &g_imgH)) return FALSE;
+    wcsncpy(g_imgSrc, path, MAX_PATH - 1);
+    g_imgSrc[MAX_PATH - 1] = 0;
+    return TRUE;
+}
+
+BOOL ChBackdrop(const wchar_t* path, const uint32_t** px, int* w, int* h)
+{
+    if (!path || !path[0]) return FALSE;
+    if (!g_bd || wcscmp(g_bdSrc, path)) {
+        ChDropBackdrop();
+        if (!LoadInto(path, &g_bd, &g_bdW, &g_bdH)) return FALSE;
+        wcsncpy(g_bdSrc, path, MAX_PATH - 1);
+        g_bdSrc[MAX_PATH - 1] = 0;
+    }
+    *px = g_bd; *w = g_bdW; *h = g_bdH;
+    return TRUE;
+}
+
+// ---- friendly names for the games we recognise ---------------------------
+struct GameId { const wchar_t* exe; const wchar_t* name; uint32_t brand; };
+static const GameId kGames[] = {
+    { L"FortniteClient-Win64-Shipping.exe", L"Fortnite",           0xFF2AA8F2 },
+    { L"VALORANT-Win64-Shipping.exe",       L"VALORANT",           0xFFFF4655 },
+    { L"cs2.exe",                           L"Counter-Strike 2",   0xFFF0A02A },
+    { L"csgo.exe",                          L"CS:GO",              0xFFF0A02A },
+    { L"r5apex.exe",                        L"Apex Legends",       0xFFDA292A },
+    { L"Overwatch.exe",                     L"Overwatch 2",        0xFFF89A22 },
+    { L"RainbowSix.exe",                    L"Rainbow Six Siege",  0xFF3A7BD5 },
+    { L"ModernWarfare.exe",                 L"Call of Duty",       0xFF6EA832 },
+    { L"destiny2.exe",                      L"Destiny 2",          0xFF4A7FB5 },
+    { L"MarvelRivals.exe",                  L"Marvel Rivals",      0xFFE8443A },
+    { L"TheFinals.exe",                     L"THE FINALS",         0xFFD01F3C },
+    { L"deadlock.exe",                      L"Deadlock",           0xFFC48A3A },
+    { L"PUBG.exe",                          L"PUBG",               0xFFF2A900 },
+    { L"RustClient.exe",                    L"Rust",               0xFFCD412B },
+    { NULL, NULL, 0 }
+};
+
+const wchar_t* PrettyGameName(const wchar_t* exe)
+{
+    static wchar_t out[64];
+    if (!exe || !exe[0]) return L"";
+    for (int i = 0; kGames[i].exe; i++)
+        if (!_wcsicmp(exe, kGames[i].exe)) return kGames[i].name;
+
+    wcsncpy(out, exe, 63); out[63] = 0;
+    wchar_t* d = wcsrchr(out, L'.');
+    if (d) *d = 0;
+    static const wchar_t* cut[] = { L"Client-Win64-Shipping", L"-Win64-Shipping",
+                                    L"Client-Win64", L"-Win64", L"-Shipping", L"_BE", NULL };
+    for (int i = 0; cut[i]; i++) {
+        wchar_t* c = wcsstr(out, cut[i]);
+        if (c) *c = 0;
+    }
+    size_t n = wcslen(out);
+    while (n && (out[n - 1] == L'-' || out[n - 1] == L'_' || out[n - 1] == L' ')) out[--n] = 0;
+    if (!out[0]) { wcsncpy(out, exe, 63); out[63] = 0; }
+    if (out[0] >= L'a' && out[0] <= L'z') out[0] = (wchar_t)(out[0] - 32);
+    return out;
+}
+
+uint32_t GameBrandColor(const wchar_t* exe)
+{
+    if (exe && exe[0])
+        for (int i = 0; kGames[i].exe; i++)
+            if (!_wcsicmp(exe, kGames[i].exe)) return kGames[i].brand;
+    return 0xFF00FCFD;
 }
 
 // ------------------------------------------------------------ raster helpers
@@ -127,6 +211,52 @@ static void Glow(uint32_t col, int amount)
     free(a); free(b);
 }
 
+// vertical two-colour blend across the drawn glyph
+static void Gradient(uint32_t from, uint32_t to)
+{
+    int top = -1, bot = -1;
+    for (int y = 0; y < S_H && top < 0; y++)
+        for (int x = 0; x < S_W; x++) if (S_P[y * S_W + x] & 0xFF000000) { top = y; break; }
+    for (int y = S_H - 1; y >= 0 && bot < 0; y--)
+        for (int x = 0; x < S_W; x++) if (S_P[y * S_W + x] & 0xFF000000) { bot = y; break; }
+    if (top < 0 || bot <= top) return;
+
+    int fr = (from >> 16) & 0xFF, fg = (from >> 8) & 0xFF, fb = from & 0xFF;
+    int tr = (to >> 16) & 0xFF,  tg = (to >> 8) & 0xFF,  tb = to & 0xFF;
+    for (int y = top; y <= bot; y++) {
+        int t = (y - top) * 255 / (bot - top);
+        uint32_t c = ((uint32_t)(fr + (tr - fr) * t / 255) << 16) |
+                     ((uint32_t)(fg + (tg - fg) * t / 255) << 8) |
+                      (uint32_t)(fb + (tb - fb) * t / 255);
+        for (int x = 0; x < S_W; x++) {
+            uint32_t p = S_P[y * S_W + x];
+            if (p & 0xFF000000) S_P[y * S_W + x] = (p & 0xFF000000) | c;
+        }
+    }
+}
+
+// soft dark copy offset behind the glyph
+static void Shadow(int amount, int ox, int oy)
+{
+    if (amount <= 0) return;
+    int n = S_W * S_H;
+    uint32_t* src = (uint32_t*)malloc((size_t)n * 4);
+    if (!src) return;
+    memcpy(src, S_P, (size_t)n * 4);
+    for (int y = 0; y < S_H; y++)
+        for (int x = 0; x < S_W; x++) {
+            int sx = x - ox, sy = y - oy;
+            if (sx < 0 || sy < 0 || sx >= S_W || sy >= S_H) continue;
+            int sa = (src[sy * S_W + sx] >> 24) & 0xFF;
+            if (!sa) continue;
+            if (S_P[y * S_W + x] & 0xFF000000) continue;
+            int a = sa * amount / 100;
+            if (a > 220) a = 220;
+            S_P[y * S_W + x] = (uint32_t)a << 24;      // black, alpha only
+        }
+    free(src);
+}
+
 static void ApplyOpacity(int op)
 {
     if (op >= 255) return;
@@ -162,7 +292,7 @@ void ChDefault(Crosshair* c, int preset)
     ZeroMemory(c, sizeof(*c));
     wcsncpy(c->name, p->name, 31);
     c->style        = p->style;
-    c->color        = 0xFF00F5A0;
+    c->color        = 0xFF00FCFD;
     c->outlineColor = 0xE6000000;
     c->length       = p->len;
     c->thickness    = p->thick;
@@ -172,6 +302,9 @@ void ChDefault(Crosshair* c, int preset)
     c->outline      = p->outline;
     c->opacity      = 255;
     c->glow         = 0;
+    c->gradColor    = 0xFF00C8D8;
+    c->shadowX      = 1;
+    c->shadowY      = 1;
     c->gridW = c->gridH = 32;
     c->pxScale = 2;
     c->imageScale = 100;
@@ -213,7 +346,9 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
                 if (!(v & 0xFF000000)) continue;
                 Bar(cx * s, cy * s, cx * s + s - 1, cy * s + s - 1, v);
             }
+        if (c->gradient) Gradient(c->color, c->gradColor);
         if (c->outline) Outline(c->outlineColor);
+        Shadow(c->shadow, c->shadowX, c->shadowY);
         Glow(c->color, c->glow);
         ApplyOpacity(c->opacity);
         out->px = buf; out->w = w; out->h = h;
@@ -230,7 +365,8 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
     int len = max(0, c->length);
     int gap = max(0, c->gap);
     int dot = max(1, c->dotSize);
-    int half = gap + len + t + dot + 3 + (c->glow > 0 ? 6 : 0);
+    int sh = c->shadow > 0 ? (abs(c->shadowX) > abs(c->shadowY) ? abs(c->shadowX) : abs(c->shadowY)) : 0;
+    int half = gap + len + t + dot + 3 + (c->glow > 0 ? 6 : 0) + sh;
     if (half > 400) half = 400;
     int n = half * 2 + 1;
 
@@ -281,7 +417,9 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
         int d0 = half - (dot / 2), d1 = d0 + dot - 1;
         Bar(d0, d0, d1, d1, col);
     }
+    if (c->gradient) Gradient(c->color, c->gradColor);
     if (c->outline) Outline(c->outlineColor);
+    Shadow(c->shadow, c->shadowX, c->shadowY);
     Glow(c->color, c->glow);
     ApplyOpacity(c->opacity);
 

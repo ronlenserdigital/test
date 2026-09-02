@@ -6,6 +6,32 @@ A ~200 KB native Windows crosshair overlay. No installer, no runtime, no Electro
 One `.exe`, one text config. It detects your game, pins a crosshair to the exact
 centre pixel of the monitor that game is on, and gets out of the way.
 
+## Design system
+
+The whole app is built from one set of tokens in `src/theme.h` - nothing
+hardcodes a colour. The brand cyan is **#00FCFD** (`rgb(0, 252, 253)`), taken
+straight from the logo, with `#8FFFFF` for highlights, `#00C8D8` and `#006B7A`
+for gradient stops, and a navy stack of `#000810` / `#011921` / `#05232D` for
+the surfaces. Cyan is reserved for state - active nav, selected preset, the
+primary CTA, live status dots, the mark itself - never for plain text.
+
+### The glass window
+
+The window is genuinely translucent, not a dark rectangle. The shell renders
+into a 32-bit DIB alongside an 8-bit alpha mask (window 0.55, panels 0.73,
+controls solid), presents it with `UpdateLayeredWindow`, and asks DWM for an
+acrylic backdrop behind it via `SetWindowCompositionAttribute`, plus rounded
+corners and dark mode through `DwmSetWindowAttribute`. The desktop shows
+through, blurred, while the panels stay readable. Dragging, minimising, the
+tray, the hotkey and the overlay are untouched by it, and **Settings ->
+Translucent glass window** drops the window back to opaque if a machine does
+not cooperate. The app also falls back automatically if the layered present
+ever fails.
+
+The mark itself is drawn as vector art (`BrandMark` in `src/icons.cpp`) so it
+scales to the sidebar, the title bar, the tray and the alt-tab icon without
+shipping a single image file.
+
 ## Why it is tiny
 
 Pure Win32 + GDI, statically linked, no framework.
@@ -30,7 +56,8 @@ beyond the geometry.
 - **Basic**: colour, opacity, thickness, outline, length, centre dot, gap,
   bloom/glow and X/Y offset. Every change applies to the overlay instantly.
 - **Shape**: cross / dot / T / circle / chevron plus their geometry.
-- **Effects**: bloom, outline colour, opacity.
+- **Effects**: bloom, outline and outline colour, drop shadow with offset,
+  two-colour gradient, alpha.
 - **Advanced**: custom image upload (PNG/BMP/JPG/GIF, alpha preserved, 10–400%)
   and the pixel-art layer.
 
@@ -40,7 +67,10 @@ line, rect, ellipse, X/Y mirror and undo — one layer deep, where it belongs.
 Eight presets sit under the canvas, and **Themes** swaps the app accent.
 
 **Game Profiles** — every game remembers its own crosshair and resolution, and
-DEADCENTER switches automatically the moment that game takes focus.
+DEADCENTER switches automatically the moment that game takes focus. Detected
+games are shown by their real name — `FortniteClient-Win64-Shipping.exe` reads
+as **Fortnite** — with a tile in the game's own brand colour, and anything
+unrecognised gets its engine suffixes stripped.
 
 **Settings** — overlay rules, auto-detect, start with Windows, and automatic
 update checks.

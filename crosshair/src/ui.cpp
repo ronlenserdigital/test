@@ -1,5 +1,7 @@
 #include "app.h"
 #include "icons.h"
+#include "theme.h"
+#include <dwmapi.h>
 #include <commdlg.h>
 #include <windowsx.h>
 #include <stdio.h>
@@ -8,6 +10,7 @@
 #include <math.h>
 #include <wchar.h>
 #include <wctype.h>
+
 #include <algorithm>
 using std::min;
 using std::max;
@@ -27,22 +30,32 @@ using std::max;
 #define HALF    ((RPW - 20) / 2)
 
 // ------------------------------------------------------------------ palette
-#define C_BG      RGB(0x07,0x09,0x0D)
-#define C_PANEL   RGB(0x0D,0x11,0x17)
-#define C_RAISED  RGB(0x14,0x19,0x21)
-#define C_HOVER   RGB(0x1B,0x21,0x2B)
-#define C_BORDER  RGB(0x1F,0x26,0x31)
-#define C_TXT     RGB(0xF2,0xF5,0xF9)
-#define C_TXT2    RGB(0x7E,0x8A,0x9B)
-#define C_DANGER  RGB(0xFF,0x4D,0x67)
+// Everything reads from theme.h; these are just short local aliases.
+#define C_BG      DC_BG
+#define C_PANEL   DC_PANEL
+#define C_RAISED  DC_RAISED
+#define C_HOVER   DC_HOVER
+#define C_BORDER  DC_BORDER
+#define C_TXT     DC_INK
+#define C_TXT2    DC_INK_2
+#define C_DANGER  DC_DANGER
 
 static const COLORREF kAccents[6] = {
-    RGB(0x00,0xF5,0xA0), RGB(0x20,0xC8,0xFF), RGB(0xB1,0x4D,0xFF),
-    RGB(0xFF,0x8A,0x1F), RGB(0xFF,0x4D,0x67), RGB(0xF2,0xF5,0xF9)
+    DC_CYAN,                   // DEADCENTER
+    RGB(0x7A,0x8F,0xFF),       // Cobalt
+    RGB(0xB1,0x4D,0xFF),       // Ultra
+    RGB(0xFF,0x8A,0x1F),       // Ember
+    RGB(0xFF,0x4D,0x67),       // Blood
+    RGB(0xF2,0xFF,0xFF)        // Bone
 };
-static const wchar_t* kAccentName[6] = { L"Venom", L"Ice", L"Ultra", L"Ember", L"Blood", L"Bone" };
-static COLORREF Acc(void)    { return kAccents[g_set.accent % 6]; }
-static COLORREF AccDim(void) { COLORREF a = Acc(); return RGB(GetRValue(a)/6, GetGValue(a)/5, GetBValue(a)/5); }
+static const wchar_t* kAccentName[6] =
+    { L"Deadcenter", L"Cobalt", L"Ultra", L"Ember", L"Blood", L"Bone" };
+
+static COLORREF Acc(void)     { return kAccents[g_set.accent % 6]; }
+static COLORREF AccBright(void) { return DcMix(Acc(), RGB(255,255,255), 110); }
+static COLORREF AccDeep(void) { return DcMix(Acc(), DC_BG, 150); }
+static COLORREF AccDim(void)  { return DcMix(DC_PANEL, Acc(), 46); }
+static COLORREF AccEdge(void) { return DcMix(DC_PANEL, Acc(), 84); }
 
 enum { SC_HOME, SC_STUDIO, SC_PRESETS, SC_PROFILES, SC_THEMES, SC_SETTINGS };
 enum { TAB_BASIC, TAB_SHAPE, TAB_FX, TAB_ADV };
@@ -54,14 +67,15 @@ enum {
     ID_NAV = 100, ID_TAB = 110, ID_STYLE = 120,
     ID_SWATCH = 200, ID_CUSTOMCOL = 220, ID_OUTLINECOL,
     ID_LEN = 230, ID_THICK, ID_GAP, ID_OPACITY, ID_DOTSIZE, ID_OFFX, ID_OFFY,
-    ID_IMGSCALE, ID_PXSCALE, ID_GLOW, ID_OUTW,
+    ID_IMGSCALE, ID_PXSCALE, ID_GLOW, ID_OUTW, ID_SHADOWX,
     ID_CENTERDOT = 250, ID_OUTLINE, ID_ONLYGAME,
     ID_IMGLOAD = 260, ID_IMGCLEAR, ID_IMGUSE,
     ID_TOOL = 270, ID_GRIDSZ = 290, ID_PXCLEAR = 295, ID_PXUNDO, ID_PXUSE,
     ID_PRESET = 300, ID_LIB = 320, ID_LIBSAVE = 340, ID_APPLY,
     ID_PROF = 350, ID_PROFAUTO = 380, ID_PROFDEL = 400, ID_PROFADD = 420,
     ID_SET = 450, ID_UPDCHECK = 460, ID_UPDINSTALL,
-    ID_ZOOM = 480, ID_ACCENT = 490,
+    ID_ENV = 470, ID_ZOOM = 480, ID_ACCENT = 490,
+    ID_GLASS = 520, ID_SHADOW, ID_GRADIENT, ID_GRADCOL, ID_GOSTUDIO,
     ID_MIN = 500, ID_HIDE, ID_CLOSE, ID_TOGGLEOVL, ID_PROFCHIP, ID_HOTKEYCHIP
 };
 enum { T_PEN, T_ERASE, T_FILL, T_LINE, T_RECT, T_CIRC, T_MIRX, T_MIRY };
@@ -72,8 +86,8 @@ static const wchar_t* kPresetSub[8] = { L"Default", L"Minimal", L"Clean", L"Bala
                                         L"Framed", L"Dynamic", L"Aggressive", L"Long range" };
 
 static const uint32_t kPalette[8] = {
-    0xFF00F5A0, 0xFF20C8FF, 0xFF3B6BFF, 0xFFB14DFF,
-    0xFFFF6B5B, 0xFFFFC93C, 0xFFFFFFFF, 0xFF8A94A3
+    0xFF00FCFD, 0xFF8FFFFF, 0xFF00C8D8, 0xFF3B6BFF,
+    0xFFB14DFF, 0xFFFF5B6B, 0xFFFFC93C, 0xFFFFFFFF
 };
 
 struct W {
@@ -103,9 +117,167 @@ static int g_lx = -1, g_ly = -1, g_sx = -1, g_sy = -1, g_cx = -1, g_cy = -1;
 static uint32_t g_undo[UNDON][MAXGRID * MAXGRID];
 static int g_undoTop = 0, g_undoCount = 0;
 
-// ------------------------------------------------------------------ gdi util
+// ------------------------------------------------------------------ glass
+// The shell renders into a 32bpp DIB. A parallel 8-bit mask says how opaque
+// each region is, so the desktop shows through the window at DC_A_WINDOW and
+// the panels stay readable at DC_A_PANEL. The result is presented with
+// UpdateLayeredWindow, with DWM blurring whatever sits behind us.
+static HDC       g_bdc  = NULL;
+static HBITMAP   g_dib  = NULL;
+static HGDIOBJ   g_bold = NULL;
+static uint32_t* g_buf  = NULL;
+static uint8_t*  g_mask = NULL;
+static int       g_bw = 0, g_bh = 0;
+static BOOL      g_layered = FALSE;
+
 static int Clamp(int v, int a, int b) { return v < a ? a : (v > b ? b : v); }
+
+static void BufferFree(void)
+{
+    if (g_bdc) { SelectObject(g_bdc, g_bold); DeleteDC(g_bdc); g_bdc = NULL; }
+    if (g_dib) { DeleteObject(g_dib); g_dib = NULL; }
+    if (g_mask) { free(g_mask); g_mask = NULL; }
+    g_buf = NULL; g_bw = g_bh = 0;
+}
+
+static BOOL BufferEnsure(int w, int h)
+{
+    if (w < 8 || h < 8) return FALSE;
+    if (g_bdc && w == g_bw && h == g_bh) return TRUE;
+    BufferFree();
+
+    BITMAPINFO bi;
+    ZeroMemory(&bi, sizeof(bi));
+    bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bi.bmiHeader.biWidth = w; bi.bmiHeader.biHeight = -h;
+    bi.bmiHeader.biPlanes = 1; bi.bmiHeader.biBitCount = 32;
+    bi.bmiHeader.biCompression = BI_RGB;
+
+    HDC screen = GetDC(NULL);
+    void* bits = NULL;
+    g_dib = CreateDIBSection(screen, &bi, DIB_RGB_COLORS, &bits, NULL, 0);
+    g_bdc = CreateCompatibleDC(screen);
+    ReleaseDC(NULL, screen);
+    if (!g_dib || !g_bdc) { BufferFree(); return FALSE; }
+    g_bold = SelectObject(g_bdc, g_dib);
+    g_buf = (uint32_t*)bits;
+    g_mask = (uint8_t*)malloc((size_t)w * h);
+    if (!g_mask) { BufferFree(); return FALSE; }
+    g_bw = w; g_bh = h;
+    return TRUE;
+}
+
+static void MaskFill(int a)
+{
+    if (g_mask) memset(g_mask, (unsigned char)a, (size_t)g_bw * g_bh);
+}
+
+// stamps a rounded rectangle (given in LOGICAL coords) into the alpha mask
+static void MaskRound(RECT lr, int a, int rad)
+{
+    if (!g_mask) return;
+    int l = (int)(lr.left * g_ds), t = (int)(lr.top * g_ds);
+    int r = (int)(lr.right * g_ds), b = (int)(lr.bottom * g_ds);
+    int rr = (int)(rad * g_ds);
+    if (l < 0) l = 0;
+    if (t < 0) t = 0;
+    if (r > g_bw) r = g_bw;
+    if (b > g_bh) b = g_bh;
+    for (int y = t; y < b; y++) {
+        int inset = 0;
+        int dy = (y < t + rr) ? (t + rr - y) : (y >= b - rr ? y - (b - rr) + 1 : 0);
+        if (dy > 0 && rr > 0) {
+            int v = rr * rr - dy * dy;
+            int q = 0;
+            while ((q + 1) * (q + 1) <= v) q++;
+            inset = rr - q;
+        }
+        uint8_t* row = g_mask + (size_t)y * g_bw;
+        for (int x = l + inset; x < r - inset; x++) row[x] = (uint8_t)a;
+    }
+}
+
+// zero the mask outside the window's rounded outline
+static void MaskClipRound(int rad)
+{
+    if (!g_mask) return;
+    int rr = (int)(rad * g_ds);
+    for (int y = 0; y < g_bh; y++) {
+        int dy = (y < rr) ? (rr - y) : (y >= g_bh - rr ? y - (g_bh - rr) + 1 : 0);
+        int inset = 0;
+        if (dy > 0 && rr > 0) {
+            int v = rr * rr - dy * dy, q = 0;
+            while ((q + 1) * (q + 1) <= v) q++;
+            inset = rr - q;
+        }
+        uint8_t* row = g_mask + (size_t)y * g_bw;
+        for (int x = 0; x < inset && x < g_bw; x++) row[x] = 0;
+        for (int x = g_bw - inset; x < g_bw; x++) if (x >= 0) row[x] = 0;
+    }
+}
+
+// Win10/11 blur behind the window, and rounded corners on Win11
+static void EnableBackdrop(HWND h)
+{
+    typedef enum { ACCENT_DISABLED = 0, ACCENT_ENABLE_BLURBEHIND = 3,
+                   ACCENT_ENABLE_ACRYLICBLURBEHIND = 4 } ACCENT_STATE;
+    struct ACCENTPOLICY { int state; int flags; unsigned gradient; int animid; };
+    struct WCA { int attrib; void* data; size_t size; };
+    typedef BOOL (WINAPI *PFN_SWCA)(HWND, struct WCA*);
+
+    HMODULE u = GetModuleHandleW(L"user32.dll");
+    PFN_SWCA swca = u ? (PFN_SWCA)(void*)GetProcAddress(u, "SetWindowCompositionAttribute") : NULL;
+    if (swca) {
+        struct ACCENTPOLICY ap;
+        ap.state = ACCENT_ENABLE_ACRYLICBLURBEHIND;
+        ap.flags = 2;                       // apply the tint to the whole client
+        ap.gradient = 0x8C100800;           // AABBGGRR - #000810 at 0.55
+        ap.animid = 0;
+        struct WCA wca; wca.attrib = 19; wca.data = &ap; wca.size = sizeof(ap);
+        if (!swca(h, &wca)) {
+            ap.state = ACCENT_ENABLE_BLURBEHIND;
+            swca(h, &wca);
+        }
+    }
+    DWORD round = 2;                        // DWMWCP_ROUND
+    DwmSetWindowAttribute(h, 33, &round, sizeof(round));
+    BOOL dark = TRUE;
+    DwmSetWindowAttribute(h, 20, &dark, sizeof(dark));
+}
+
+static void Present(HWND h, HDC target)
+{
+    if (!g_buf) return;
+    if (g_layered && g_set.glass) {
+        for (int i = 0; i < g_bw * g_bh; i++) {
+            int a = g_mask[i];
+            uint32_t c = g_buf[i];
+            if (!a) { g_buf[i] = 0; continue; }
+            g_buf[i] = ((uint32_t)a << 24) |
+                       ((uint32_t)((((c >> 16) & 0xFF) * a) / 255) << 16) |
+                       ((uint32_t)((((c >>  8) & 0xFF) * a) / 255) << 8) |
+                        (uint32_t)(((  c        & 0xFF) * a) / 255);
+        }
+        SIZE sz = { g_bw, g_bh };
+        POINT src = { 0, 0 };
+        BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
+        HDC screen = GetDC(NULL);
+        BOOL ok = UpdateLayeredWindow(h, screen, NULL, &sz, g_bdc, &src, 0, &bf, ULW_ALPHA);
+        ReleaseDC(NULL, screen);
+        if (ok) return;
+        g_set.glass = 0;                    // fall back to an opaque window
+    }
+    if (target) BitBlt(target, 0, 0, g_bw, g_bh, g_bdc, 0, 0, SRCCOPY);
+}
 static COLORREF ToRef(uint32_t c) { return RGB((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF); }
+
+static RECT RC(int l, int t, int r, int b) { RECT x; SetRect(&x, l, t, r, b); return x; }
+static RECT RSide(void)    { return RC(0, 0, SIDEW, WINH); }
+static RECT RStatus(void)  { return RC(16, WINH - 306, SIDEW - 16, WINH - 42); }
+static RECT RPrev(void)    { return RC(PVX, PVY, PVX + PVW, PVY + PVH); }
+static RECT RStrip(void)   { return RC(PVX, PVY + PVH + 22, PVX + PVW, WINH - PAD); }
+static RECT RRight(void)   { return RC(RPX - 18, PVY - 16, WINW - 10, WINH - 16); }
+static RECT RContent(void) { return RC(PVX - 14, PVY - 16, WINW - 10, WINH - 16); }
 
 static void Fill(HDC dc, RECT r, COLORREF c)
 {
@@ -122,6 +294,42 @@ static void Card(HDC dc, RECT r, COLORREF fill, COLORREF border, int rad)
     RoundRect(dc, r.left, r.top, r.right, r.bottom, rad, rad);
     SelectObject(dc, ob); SelectObject(dc, op);
     DeleteObject(b); DeleteObject(p);
+}
+
+// 135deg two-stop gradient clipped to a rounded rect - the primary CTA
+static void CardGrad(HDC dc, RECT r, COLORREF a, COLORREF b, COLORREF border, int rad)
+{
+    HRGN rgn = CreateRoundRectRgn(r.left, r.top, r.right + 1, r.bottom + 1, rad, rad);
+    SelectClipRgn(dc, rgn);
+    int span = (r.right - r.left) + (r.bottom - r.top);
+    if (span < 1) span = 1;
+    for (int y = r.top; y < r.bottom; y++) {
+        for (int x = r.left; x < r.right; x += 8) {
+            int t = ((x - r.left) + (y - r.top)) * 255 / span;
+            RECT q; SetRect(&q, x, y, x + 8 > r.right ? r.right : x + 8, y + 1);
+            Fill(dc, q, DcMix(a, b, t));
+        }
+    }
+    SelectClipRgn(dc, NULL);
+    DeleteObject(rgn);
+    HPEN p = CreatePen(PS_SOLID, 1, border);
+    HGDIOBJ op = SelectObject(dc, p), ob = SelectObject(dc, GetStockObject(NULL_BRUSH));
+    RoundRect(dc, r.left, r.top, r.right, r.bottom, rad, rad);
+    SelectObject(dc, op); SelectObject(dc, ob);
+    DeleteObject(p);
+}
+
+// two mixed outlines around an element - restrained, never on plain text
+static void GlowRing(HDC dc, RECT r, COLORREF neon, COLORREF over, int rad)
+{
+    for (int i = 1; i <= 2; i++) {
+        RECT o = r; InflateRect(&o, i * 2, i * 2);
+        HPEN p = CreatePen(PS_SOLID, 1, DcMix(over, neon, i == 1 ? 92 : 34));
+        HGDIOBJ op = SelectObject(dc, p), ob = SelectObject(dc, GetStockObject(NULL_BRUSH));
+        RoundRect(dc, o.left, o.top, o.right, o.bottom, rad + i * 2, rad + i * 2);
+        SelectObject(dc, op); SelectObject(dc, ob);
+        DeleteObject(p);
+    }
 }
 
 static void Dot(HDC dc, int x, int y, int r, COLORREF c)
@@ -278,10 +486,16 @@ static void LayoutChrome(void)
 
 static void LayoutPreviewCard(void)
 {
+    static const wchar_t* en[5] = { L"Dark", L"Arena", L"Grass", L"Sky", L"Custom" };
+    for (int i = 0; i < 5; i++) {
+        W* p = Add(ID_ENV + i, WK_BTN, PVX + 200 + i * 66, PVY + 14, 60, 28, en[i]);
+        p->variant = V_CHIP;
+        p->active = (g_set.previewEnv == i);
+    }
     static const wchar_t* zn[3] = { L"100%", L"200%", L"400%" };
     static const int zv[3] = { 1, 2, 4 };
     for (int i = 0; i < 3; i++) {
-        W* p = Add(ID_ZOOM + i, WK_BTN, PVX + PVW - 24 - (3 - i) * 78, PVY + 14, 72, 30, zn[i]);
+        W* p = Add(ID_ZOOM + i, WK_BTN, PVX + PVW - 20 - (3 - i) * 66, PVY + 14, 60, 28, zn[i]);
         p->variant = V_CHIP;
         p->active = (g_set.previewZoom == zv[i]);
     }
@@ -336,18 +550,34 @@ static void LayoutShape(int y)
     y += 66;
     Toggle(ID_CENTERDOT, RPX, &y, RPW, L"Center dot", &g_ch.centerDot, IC_DOT);
     Toggle(ID_OUTLINE,   RPX, &y, RPW, L"Outline",    &g_ch.outline, IC_OUTLINE);
+    y += 10;
+    Head(RPX, &y, RPW, L"CUSTOM SHAPE", IC_GRID);
+    W* a = Add(ID_PXUSE, WK_BTN, RPX, y, HALF, 36, L"Pixel art");
+    a->variant = (g_ch.style == ST_PIXEL) ? V_ACCENT : V_GHOST;
+    a->icon = IC_GRID;
+    W* b = Add(ID_GOSTUDIO, WK_BTN, RPX + HALF + 20, y, HALF, 36, L"Open Studio");
+    b->variant = V_GHOST;
+    b->icon = IC_PEN;
 }
 
 static void LayoutFx(int y)
 {
     Head(RPX, &y, RPW, L"GLOW", IC_SPARK);
     Slider(ID_GLOW, RPX, y, RPW, L"BLOOM / GLOW", &g_ch.glow, 0, 100, L"%", IC_GLOW);
-    y += 62;
+    y += 58;
     Head(RPX, &y, RPW, L"OUTLINE", IC_OUTLINE);
     Toggle(ID_OUTLINE, RPX, &y, RPW, L"Draw outline", &g_ch.outline, IC_OUTLINE);
-    Ic(Add(ID_OUTLINECOL, WK_BTN, RPX, y, RPW, 36, L"OUTLINE COLOR"), IC_PALETTE)->variant = V_GHOST;
-    y += 52;
-    Head(RPX, &y, RPW, L"VISIBILITY", IC_EYE);
+    Ic(Add(ID_OUTLINECOL, WK_BTN, RPX, y, RPW, 34, L"Outline colour"), IC_PALETTE)->variant = V_GHOST;
+    y += 48;
+    Head(RPX, &y, RPW, L"SHADOW", IC_SHAPE);
+    Slider(ID_SHADOW, RPX, y, HALF, L"STRENGTH", &g_ch.shadow, 0, 100, L"%", IC_DROP);
+    Slider(ID_SHADOWX, RPX + HALF + 20, y, HALF, L"OFFSET", &g_ch.shadowX, -6, 6, L"px", IC_ARROWX);
+    y += 56;
+    Head(RPX, &y, RPW, L"GRADIENT", IC_PALETTE);
+    Toggle(ID_GRADIENT, RPX, &y, RPW, L"Blend to a second colour", &g_ch.gradient, IC_PALETTE);
+    Ic(Add(ID_GRADCOL, WK_BTN, RPX, y, RPW, 34, L"Gradient colour"), IC_PALETTE)->variant = V_GHOST;
+    y += 48;
+    Head(RPX, &y, RPW, L"ALPHA", IC_EYE);
     Slider(ID_OPACITY, RPX, y, RPW, L"OPACITY", &g_ch.opacity, 10, 255, L"", IC_DROP);
 }
 
@@ -377,6 +607,21 @@ static void LayoutAdv(int y)
     p->icon = IC_GRID;
     y += 44;
     Slider(ID_PXSCALE, RPX, y, RPW, L"PIXEL SIZE", &g_ch.pxScale, 1, 10, L"px", IC_GRID);
+    y += 58;
+    Head(RPX, &y, RPW, L"EXACT DIMENSIONS", IC_LENGTH);
+    {
+        ChBitmap b;
+        wchar_t t[72];
+        if (ChBuild(&g_ch, &b)) {
+            _snwprintf(t, 72, L"%d \x00D7 %d px   \x2022   aim pixel at %d, %d",
+                       b.w, b.h, b.ax, b.ay);
+            ChFree(&b);
+        } else {
+            wcscpy(t, L"nothing to draw");
+        }
+        t[71] = 0;
+        Add(0, WK_TEXT, RPX, y, RPW, 18, t);
+    }
 }
 
 static void LayoutRightPanel(void)
@@ -522,6 +767,7 @@ static void LayoutSettings(void)
     y += 14;
     Head(x, &y, w, L"SYSTEM", IC_GEAR);
     Toggle(ID_SET + 4, x, &y, w, L"Start with Windows", &g_set.startWithWindows, IC_POWER);
+    Toggle(ID_GLASS,   x, &y, w, L"Translucent glass window", &g_set.glass, IC_EYE);
     Toggle(ID_SET + 5, x, &y, w, L"Check for updates automatically", &g_set.autoUpdate, IC_REFRESH);
     y += 10;
     Ic(Add(ID_UPDCHECK, WK_BTN, x, y, 210, 38, L"CHECK FOR UPDATES"), IC_REFRESH)->variant = V_GHOST;
@@ -550,16 +796,44 @@ static void Layout(void)
 }
 
 // ------------------------------------------------------------------ preview
-// the preview is the crosshair and nothing else - a flat, neutral field
+// aiming environments, so you can judge visibility before you load in
 static void PreviewBg(uint32_t* b, int w, int h)
 {
+    int env = g_set.previewEnv;
+    if (env == 4) {
+        const uint32_t* src = NULL; int sw = 0, sh = 0;
+        if (ChBackdrop(g_set.previewImage, &src, &sw, &sh) && sw > 0 && sh > 0) {
+            double fx = (double)sw / w, fy = (double)sh / h;
+            double f = fx < fy ? fx : fy;
+            int cw = (int)(w * f), chh = (int)(h * f);
+            int ox = (sw - cw) / 2, oy = (sh - chh) / 2;
+            for (int y = 0; y < h; y++) {
+                const uint32_t* sr = src + (size_t)(oy + (int)((int64_t)y * chh / h)) * sw;
+                uint32_t* dr = b + (size_t)y * w;
+                for (int x = 0; x < w; x++)
+                    dr[x] = sr[ox + (int)((int64_t)x * cw / w)] | 0xFF000000;
+            }
+            return;
+        }
+        env = 0;
+    }
     for (int y = 0; y < h; y++) {
         double t = (double)y / (h ? h : 1);
-        uint32_t row = 0xFF000000 |
-            ((uint32_t)Clamp(10 + (int)(t * 5), 0, 255) << 16) |
-            ((uint32_t)Clamp(13 + (int)(t * 6), 0, 255) << 8) |
-             (uint32_t)Clamp(18 + (int)(t * 8), 0, 255);
-        for (int x = 0; x < w; x++) b[y * w + x] = row;
+        for (int x = 0; x < w; x++) {
+            int r, g, bl;
+            switch (env) {
+            case 1: r = 26 + (int)(t * 30); g = 34 + (int)(t * 36); bl = 48 + (int)(t * 44); break;
+            case 2: r = 38 + (int)(t * 26); g = 84 + (int)(t * 42); bl = 34 + (int)(t * 18); break;
+            case 3: r = 86 - (int)(t * 42); g = 152 - (int)(t * 52); bl = 218 - (int)(t * 44); break;
+            default: r = 6 + (int)(t * 5);  g = 12 + (int)(t * 7);  bl = 18 + (int)(t * 10); break;
+            }
+            if (env == 1 || env == 2) {
+                int n = ((x * 73856093) ^ (y * 19349663)) & 23;
+                r += n - 12; g += n - 12; bl += n - 12;
+            }
+            b[y * w + x] = 0xFF000000 | ((uint32_t)Clamp(r, 0, 255) << 16) |
+                           ((uint32_t)Clamp(g, 0, 255) << 8) | (uint32_t)Clamp(bl, 0, 255);
+        }
     }
 }
 
@@ -583,9 +857,9 @@ static void PaintPreviewDev(HDC dc, RECT dev)
     PreviewBg(buf, w, h);
 
     int mcx = w / 2, mcy = h / 2;
-    uint32_t guide = 0x22FFFFFF;
-    for (int x = 0; x < w; x += 2) Blend(&buf[mcy * w + x], guide);
-    for (int y = 0; y < h; y += 2) Blend(&buf[y * w + mcx], guide);
+    uint32_t guide = 0x1600FCFD;                 // extremely subtle centre guides
+    for (int x = 0; x < w; x += 3) Blend(&buf[mcy * w + x], guide);
+    for (int y = 0; y < h; y += 3) Blend(&buf[y * w + mcx], guide);
 
     ChBitmap cb;
     if (ChBuild(&g_ch, &cb)) {
@@ -692,10 +966,18 @@ static void PaintWidget(HDC dc, W* p, int hover)
 
     case WK_NAV: {
         if (p->active) {
-            Card(dc, p->r, C_RAISED, C_BORDER, 12);
-            RECT bar; SetRect(&bar, p->r.right - 4, p->r.top + 12, p->r.right - 1, p->r.bottom - 12);
+            int wdt = p->r.right - p->r.left;
+            for (int x = p->r.left; x < p->r.right; x += 4) {
+                int t = (x - p->r.left) * 255 / (wdt ? wdt : 1);
+                int mix = t < 165 ? 46 - t * 40 / 165 : 6 - (t - 165) * 6 / 90;
+                RECT q; SetRect(&q, x, p->r.top, x + 4, p->r.bottom);
+                Fill(dc, q, DcMix(DC_PANEL, Acc(), mix < 0 ? 0 : mix));
+            }
+            RECT bar; SetRect(&bar, p->r.left - 4, p->r.top + 11, p->r.left - 2, p->r.bottom - 11);
             Fill(dc, bar, Acc());
-        } else if (hover) Card(dc, p->r, C_PANEL, C_PANEL, 12);
+        } else if (hover) {
+            Card(dc, p->r, DcMix(DC_PANEL, Acc(), 8), DcMix(DC_PANEL, Acc(), 14), 10);
+        }
         Icon(dc, p->icon, p->r.left + 24, (p->r.top + p->r.bottom) / 2, 9,
              p->active ? Acc() : C_TXT2);
         RECT t = p->r; t.left += 46;
@@ -715,11 +997,19 @@ static void PaintWidget(HDC dc, W* p, int hover)
 
     case WK_BTN: {
         COLORREF fill = C_RAISED, bd = C_BORDER, tc = C_TXT;
-        if (p->variant == V_ACCENT)      { fill = Acc();    bd = Acc();    tc = RGB(3, 12, 9); }
-        else if (p->variant == V_DANGER) { fill = C_PANEL;  bd = C_DANGER; tc = C_DANGER; }
-        else if (p->active)              { fill = AccDim(); bd = Acc();    tc = Acc(); }
-        else if (hover)                  { fill = C_HOVER; }
-        Card(dc, p->r, fill, bd, 10);
+        if (p->variant == V_ACCENT) {
+            GlowRing(dc, p->r, Acc(), DC_PANEL, DC_R_BTN);
+            CardGrad(dc, p->r, Acc(), AccDeep(), AccBright(), DC_R_BTN);
+            tc = RGB(2, 14, 18);
+            Txt(dc, p->r, p->text, tc, g_fb, DT_CENTER | DT_VCENTER);
+            if (p->icon) Icon(dc, p->icon, p->r.left + 20, (p->r.top + p->r.bottom) / 2, 8, tc);
+            break;
+        }
+        if (p->variant == V_DANGER)      { fill = C_PANEL;  bd = DcMix(DC_PANEL, DC_DANGER, 90); tc = C_DANGER; }
+        else if (p->active)              { fill = AccDim(); bd = Acc();  tc = Acc(); }
+        else if (hover)                  { fill = C_HOVER;  bd = DcMix(DC_BORDER, Acc(), 60); }
+        Card(dc, p->r, fill, bd, DC_R_BTN);
+        if (p->active) GlowRing(dc, p->r, Acc(), C_PANEL, DC_R_BTN);
         int mid = (p->r.top + p->r.bottom) / 2;
         if (p->icon && !p->text[0]) {
             Icon(dc, p->icon, (p->r.left + p->r.right) / 2, mid, 7, tc);
@@ -869,10 +1159,11 @@ static void PaintSidebar(HDC dc)
     RECT sl; SetRect(&sl, SIDEW - 1, 0, SIDEW, WINH);
     Fill(dc, sl, C_BORDER);
 
-    Dot(dc, 48, 56, 20, C_RAISED);
-    Dot(dc, 48, 56, 19, C_PANEL);
-    Icon(dc, IC_CROSSHAIR, 48, 56, 13, Acc());
-    TxtAt(dc, 78, 40, 170, 32, APP_NAME, C_TXT, g_fh, DT_LEFT | DT_VCENTER);
+    BrandMark(dc, 46, 54, 22, Acc(), DcMix(DC_PANEL, DC_BG, 120));
+    TxtAt(dc, 78, 38, 170, 32, APP_NAME, C_TXT, g_fh, DT_LEFT | DT_VCENTER);
+    TxtAt(dc, 79, 60, 170, 14, L"PRECISION. YOUR WAY.", DC_INK_MUTE, g_fxs, DT_LEFT | DT_VCENTER);
+    RECT hr; SetRect(&hr, 20, 88, SIDEW - 20, 89);
+    Fill(dc, hr, DcMix(DC_PANEL, Acc(), 30));
 
     // status card
     int cy = WINH - 306;
@@ -887,11 +1178,20 @@ static void PaintSidebar(HDC dc)
     RECT g; SetRect(&g, 28, cy + 40, SIDEW - 28, cy + 92);
     Card(dc, g, C_RAISED, C_BORDER, 10);
     RECT ic; SetRect(&ic, 38, cy + 50, 70, cy + 82);
-    Card(dc, ic, AccDim(), Acc(), 8);
-    wchar_t initial[4] = { g_lastGame[0] ? (wchar_t)towupper(g_lastGame[0]) : L'-', 0 };
-    Txt(dc, ic, initial, Acc(), g_fb, DT_CENTER | DT_VCENTER);
+    uint32_t brand = GameBrandColor(g_lastGame);
+    COLORREF bc = RGB((brand >> 16) & 0xFF, (brand >> 8) & 0xFF, brand & 0xFF);
+    if (g_lastGame[0]) {
+        CardGrad(dc, ic, DcMix(bc, RGB(255,255,255), 40), DcMix(bc, DC_BG, 90),
+                 DcMix(bc, DC_BG, 40), 8);
+        wchar_t initial[4] = { (wchar_t)towupper(g_lastGame[0]), 0 };
+        Txt(dc, ic, initial, RGB(255,255,255), g_fh, DT_CENTER | DT_VCENTER);
+    } else {
+        Card(dc, ic, AccDim(), AccEdge(), 8);
+        Txt(dc, ic, L"\x2014", DC_INK_MUTE, g_fb, DT_CENTER | DT_VCENTER);
+    }
     TxtAt(dc, 80, cy + 48, SIDEW - 112, 18,
-          g_lastGame[0] ? g_lastGame : L"No game", C_TXT, g_fs, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
+          g_lastGame[0] ? PrettyGameName(g_lastGame) : L"No game",
+          C_TXT, g_fs, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
     {
         wchar_t sub[64];
         int rw = 0, rh = 0; OverlayResolution(&rw, &rh);
@@ -946,9 +1246,10 @@ static void PaintPreviewCard(HDC dc)
 static void PaintShell(HWND h, HDC target)
 {
     RECT client; GetClientRect(h, &client);
-    HDC dc = CreateCompatibleDC(target);
-    HBITMAP bm = CreateCompatibleBitmap(target, client.right, client.bottom);
-    HGDIOBJ ob = SelectObject(dc, bm);
+    if (!BufferEnsure(client.right, client.bottom)) return;
+    HDC dc = g_bdc;
+    ModifyWorldTransform(dc, NULL, MWT_IDENTITY);
+    SetGraphicsMode(dc, GM_COMPATIBLE);
     if (g_ds != 1.0f) { SetGraphicsMode(dc, GM_ADVANCED); SetWorldTransform(dc, &g_xf); }
 
     RECT full; SetRect(&full, 0, 0, WINW, WINH);
@@ -956,6 +1257,12 @@ static void PaintShell(HWND h, HDC target)
     PaintSidebar(dc);
 
     Layout();
+
+    // the plate the right-hand controls sit on, so text stays readable on glass
+    if (g_screen == SC_HOME || g_screen == SC_STUDIO)
+        Card(dc, RRight(), C_PANEL, C_BORDER, DC_R_PANEL);
+    else
+        Card(dc, RContent(), C_PANEL, C_BORDER, DC_R_PANEL);
 
     if (g_screen == SC_HOME) {
         PaintPreviewCard(dc);
@@ -1007,10 +1314,28 @@ static void PaintShell(HWND h, HDC target)
 
     ModifyWorldTransform(dc, NULL, MWT_IDENTITY);
     SetGraphicsMode(dc, GM_COMPATIBLE);
-    BitBlt(target, 0, 0, client.right, client.bottom, dc, 0, 0, SRCCOPY);
-    SelectObject(dc, ob);
-    DeleteObject(bm);
-    DeleteDC(dc);
+
+    // ---- alpha mask: window is glass, panels are readable, widgets are solid
+    MaskFill(0);
+    MaskRound(full, DC_A_WINDOW, DC_R_WINDOW);
+    MaskRound(RSide(), DC_A_PANEL, DC_R_WINDOW);
+    MaskRound(RStatus(), DC_A_PANEL + 26, DC_R_PANEL);
+    if (g_screen == SC_HOME || g_screen == SC_STUDIO) {
+        MaskRound(RRight(), DC_A_PANEL, DC_R_PANEL);
+        MaskRound(g_screen == SC_HOME ? RPrev() : RC(PVX, PVY, PVX + PVW, WINH - PAD),
+                  DC_A_PANEL, DC_R_PANEL);
+        if (g_screen == SC_HOME) MaskRound(RStrip(), DC_A_PANEL, DC_R_PANEL);
+    } else {
+        MaskRound(RContent(), DC_A_PANEL, DC_R_PANEL);
+    }
+    for (int i = 0; i < g_nw; i++) {
+        int k = g_w[i].kind;
+        if (k == WK_BTN || k == WK_CARD || k == WK_ROW || k == WK_CHIP || k == WK_SWATCH)
+            MaskRound(g_w[i].r, DC_A_SOLID, DC_R_BTN);
+    }
+    MaskClipRound(DC_R_WINDOW);
+
+    Present(h, target);
 }
 
 // ------------------------------------------------------------------ pixel ops
@@ -1075,19 +1400,22 @@ static void PFlood(int x, int y, uint32_t c)
 }
 
 // ------------------------------------------------------------------ dialogs
-static void PickColor(int outlineTarget)
+// target: 0 = crosshair colour, 1 = outline, 2 = gradient end
+static void PickColor(int target)
 {
     CHOOSECOLORW cc;
     ZeroMemory(&cc, sizeof(cc));
     cc.lStructSize = sizeof(cc);
     cc.hwndOwner = g_hwnd;
     cc.lpCustColors = g_custom;
-    cc.rgbResult = ToRef(outlineTarget ? g_ch.outlineColor : g_ch.color);
+    cc.rgbResult = ToRef(target == 1 ? g_ch.outlineColor :
+                         target == 2 ? g_ch.gradColor : g_ch.color);
     cc.Flags = CC_FULLOPEN | CC_RGBINIT;
     if (!ChooseColorW(&cc)) return;
     uint32_t c = ((uint32_t)GetRValue(cc.rgbResult) << 16) |
                  ((uint32_t)GetGValue(cc.rgbResult) << 8) | (uint32_t)GetBValue(cc.rgbResult);
-    if (outlineTarget) { g_ch.outlineColor = 0xE6000000 | c; ApplyAndSave(); }
+    if (target == 1)      { g_ch.outlineColor = 0xE6000000 | c; ApplyAndSave(); }
+    else if (target == 2) { g_ch.gradColor = 0xFF000000 | c; g_ch.gradient = 1; ApplyAndSave(); }
     else SetColor(c);
 }
 
@@ -1123,6 +1451,24 @@ static void LibSave(void)
     g_libUsed[slot] = 1;
     ShellStatus(L"Saved to library");
     CfgSave();
+}
+
+// switch the window between layered glass and an opaque surface at runtime
+static void ApplyGlass(void)
+{
+    if (!g_hwnd) return;
+    LONG_PTR ex = GetWindowLongPtrW(g_hwnd, GWL_EXSTYLE);
+    if (g_set.glass) {
+        SetWindowLongPtrW(g_hwnd, GWL_EXSTYLE, ex | WS_EX_LAYERED);
+        g_layered = TRUE;
+        EnableBackdrop(g_hwnd);
+    } else {
+        SetWindowLongPtrW(g_hwnd, GWL_EXSTYLE, ex & ~WS_EX_LAYERED);
+        g_layered = FALSE;
+    }
+    SetWindowPos(g_hwnd, NULL, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    InvalidateRect(g_hwnd, NULL, TRUE);
 }
 
 // ------------------------------------------------------------------ commands
@@ -1213,6 +1559,27 @@ static void Command(int id)
         }
         return;
     }
+    if (id >= ID_ENV && id < ID_ENV + 5) {
+        int e = id - ID_ENV;
+        if (e == 4) {
+            wchar_t file[MAX_PATH] = L"";
+            OPENFILENAMEW ofn;
+            ZeroMemory(&ofn, sizeof(ofn));
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = g_hwnd;
+            ofn.lpstrFilter = L"Images\0*.png;*.bmp;*.jpg;*.jpeg;*.gif\0All files\0*.*\0";
+            ofn.lpstrFile = file;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+            if (!GetOpenFileNameW(&ofn)) { ShellRedraw(); return; }
+            wcsncpy(g_set.previewImage, file, MAX_PATH - 1);
+            g_set.previewImage[MAX_PATH - 1] = 0;
+            ChDropBackdrop();
+        }
+        g_set.previewEnv = e;
+        CfgSave(); ShellRedraw();
+        return;
+    }
     if (id >= ID_ZOOM && id < ID_ZOOM + 3) {
         static const int zv[3] = { 1, 2, 4 };
         g_set.previewZoom = zv[id - ID_ZOOM]; CfgSave(); ShellRedraw(); return;
@@ -1232,6 +1599,10 @@ static void Command(int id)
     case ID_ONLYGAME:   g_set.onlyInGame = !g_set.onlyInGame; CfgSave(); ShellGameChanged(); ShellRedraw(); break;
     case ID_CUSTOMCOL:  PickColor(0); break;
     case ID_OUTLINECOL: PickColor(1); break;
+    case ID_GRADCOL:    PickColor(2); break;
+    case ID_GRADIENT:   g_ch.gradient = !g_ch.gradient; ApplyAndSave(); break;
+    case ID_GOSTUDIO:   g_screen = SC_STUDIO; ShellRedraw(); break;
+    case ID_GLASS:      g_set.glass = !g_set.glass; CfgSave(); ApplyGlass(); ShellRedraw(); break;
     case ID_CENTERDOT:  g_ch.centerDot = !g_ch.centerDot; ApplyAndSave(); break;
     case ID_OUTLINE:    g_ch.outline = !g_ch.outline; ApplyAndSave(); break;
     case ID_IMGLOAD:    PickImage(); break;
@@ -1413,6 +1784,19 @@ static LRESULT CALLBACK ShellProc(HWND h, UINT m, WPARAM w, LPARAM l)
         else if (w == VK_ESCAPE) ShellShow(FALSE);
         return 0;
 
+    case WM_TIMER:
+        if (w == 9) InvalidateRect(h, NULL, FALSE);
+        return 0;
+
+    case WM_SHOWWINDOW:
+        if (w) SetTimer(h, 9, 150, NULL); else KillTimer(h, 9);
+        return 0;
+
+    case WM_DESTROY:
+        KillTimer(h, 9);
+        BufferFree();
+        return 0;
+
     case WM_CLOSE:
         AppExit();
         return 0;
@@ -1421,6 +1805,42 @@ static LRESULT CALLBACK ShellProc(HWND h, UINT m, WPARAM w, LPARAM l)
 }
 
 // ------------------------------------------------------------------ api
+// Inter / Geist / Manrope / Sora if the user has one, else the Windows stack
+static int CALLBACK FaceProbe(const LOGFONTW* lf, const TEXTMETRICW* tm, DWORD type, LPARAM p)
+{
+    (void)lf; (void)tm; (void)type;
+    *(int*)p = 1;
+    return 0;
+}
+
+static BOOL HaveFace(const wchar_t* name)
+{
+    LOGFONTW lf;
+    ZeroMemory(&lf, sizeof(lf));
+    lf.lfCharSet = DEFAULT_CHARSET;
+    wcsncpy(lf.lfFaceName, name, LF_FACESIZE - 1);
+    int found = 0;
+    HDC dc = GetDC(NULL);
+    EnumFontFamiliesExW(dc, &lf, FaceProbe, (LPARAM)&found, 0);
+    ReleaseDC(NULL, dc);
+    return found != 0;
+}
+
+static const wchar_t* PickFace(void)
+{
+    static const wchar_t* want[] = { L"Inter", L"Geist", L"Manrope", L"Sora",
+                                     L"Segoe UI Variable Display", NULL };
+    for (int i = 0; want[i]; i++) if (HaveFace(want[i])) return want[i];
+    return L"Segoe UI";
+}
+
+static HFONT MakeFont(int px, int weight, const wchar_t* face)
+{
+    return CreateFontW(-px, 0, 0, 0, weight, 0, 0, 0, DEFAULT_CHARSET,
+                       OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+                       DEFAULT_PITCH | FF_DONTCARE, face);
+}
+
 BOOL ShellCreate(void)
 {
     WNDCLASSEXW wc;
@@ -1450,18 +1870,22 @@ BOOL ShellCreate(void)
     g_xf.eM11 = g_ds; g_xf.eM12 = 0.0f; g_xf.eM21 = 0.0f;
     g_xf.eM22 = g_ds; g_xf.eDx = 0.0f;  g_xf.eDy = 0.0f;
 
-    g_hwnd = CreateWindowExW(WS_EX_APPWINDOW, APP_CLASS, APP_NAME,
+    DWORD ex = WS_EX_APPWINDOW | (g_set.glass ? WS_EX_LAYERED : 0);
+    g_hwnd = CreateWindowExW(ex, APP_CLASS, APP_NAME,
         WS_POPUP | WS_MINIMIZEBOX, (sw - pw) / 2, (sh - ph) / 2, pw, ph,
         NULL, NULL, g_inst, NULL);
     if (!g_hwnd) return FALSE;
-    SetWindowRgn(g_hwnd, CreateRoundRectRgn(0, 0, pw + 1, ph + 1, 18, 18), TRUE);
+    g_layered = g_set.glass ? TRUE : FALSE;
+    if (g_set.glass) EnableBackdrop(g_hwnd);
 
-    g_f   = CreateFontW(15, 0, 0, 0, FW_NORMAL,   0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fb  = CreateFontW(15, 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fs  = CreateFontW(14, 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fxs = CreateFontW(12, 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fh  = CreateFontW(21, 0, 0, 0, FW_BOLD,     0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fxl = CreateFontW(30, 0, 0, 0, FW_LIGHT,    0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
+    const wchar_t* face = PickFace();
+    // grayscale AA, not ClearType: subpixel text on a translucent surface fringes
+    g_f   = MakeFont(14, FW_NORMAL,   face);
+    g_fb  = MakeFont(14, FW_SEMIBOLD, face);
+    g_fs  = MakeFont(13, FW_SEMIBOLD, face);
+    g_fxs = MakeFont(11, FW_SEMIBOLD, face);
+    g_fh  = MakeFont(20, FW_BOLD,     face);
+    g_fxl = MakeFont(30, FW_LIGHT,    face);
     (void)g_fxl;
     return TRUE;
 }
@@ -1473,6 +1897,7 @@ void ShellShow(BOOL show)
         ShowWindow(g_hwnd, SW_SHOW);
         SetForegroundWindow(g_hwnd);
         InvalidateRect(g_hwnd, NULL, FALSE);
+        UpdateWindow(g_hwnd);          // a layered window shows nothing until presented
     } else ShowWindow(g_hwnd, SW_HIDE);
 }
 

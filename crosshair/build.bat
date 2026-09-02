@@ -5,6 +5,6 @@ cl /nologo /W3 /O1 /Os /GS- /MT /EHsc /DUNICODE /D_UNICODE ^
    src\main.cpp src\ui.cpp src\render.cpp src\overlay.cpp src\config.cpp src\update.cpp src\icons.cpp ^
    /Fe:build\DeadCenter.exe /Fo:build\ ^
    /link /SUBSYSTEM:WINDOWS /ENTRY:wWinMainCRTStartup ^
-   gdi32.lib user32.lib shell32.lib comdlg32.lib gdiplus.lib ole32.lib advapi32.lib winhttp.lib
+   gdi32.lib user32.lib dwmapi.lib shell32.lib comdlg32.lib gdiplus.lib ole32.lib advapi32.lib winhttp.lib
 echo.
 dir build\DeadCenter.exe
