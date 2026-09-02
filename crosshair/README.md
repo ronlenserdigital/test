@@ -50,8 +50,11 @@ the app itself — no icon font, no image assets, nothing added to the binary
 beyond the geometry.
 
 **Design** — three modes so the complexity is opt-in:
-- **Basic**: colour, opacity, thickness, outline, length, centre dot, gap,
-  bloom/glow and X/Y offset. Every change applies to the overlay instantly.
+- **Basic**: a full colour picker — saturation/value field, hue bar, live hex
+  readout and eight swatches — that edits the **crosshair, the outline or the
+  gradient**, whichever target you pick. Then opacity, thickness, outline,
+  length, centre dot, gap, bloom/glow and X/Y offset. Every change applies to
+  the overlay instantly.
 - **Shape**: cross / dot / T / circle / chevron plus their geometry.
 - **Effects**: bloom, outline and outline colour, drop shadow with offset,
   two-colour gradient, alpha.
@@ -78,7 +81,10 @@ update checks.
   changes come from a `SetWinEventHook`, not a poll — and comes straight back
   when you tab in. Turn that rule off with **Only in game** (in the sidebar card
   and in Settings) to keep the crosshair on the desktop too.
-- **F12** anywhere hides or brings back the window.
+- **F12** anywhere hides or brings back the window. If another app already owns
+  F12 (overlays often do), DEADCENTER falls back to Ctrl+F12, Alt+F12,
+  Shift+F12 or Ctrl+Shift+F12 and shows whichever it got, everywhere it prints
+  the hotkey.
 - **HIDE** removes the window *and* the tray icon — the app vanishes completely.
 - **MIN** / **×**, tray icon with right-click menu, Esc to hide.
 - The overlay is layered, click-through and no-activate: it never steals a click

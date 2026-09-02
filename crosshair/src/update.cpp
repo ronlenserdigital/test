@@ -123,9 +123,9 @@ static DWORD WINAPI Worker(LPVOID arg)
             wcsncpy(g_newVer, ver, 31);
             wcsncpy(g_dlUrl, url, 511);
             g_have = TRUE;
-            _snwprintf(g_status, 128, L"Version %s is available.", ver);
+            _snwprintf(g_status, 128, L"Version %ls is available.", ver);
         } else {
-            _snwprintf(g_status, 128, L"You are up to date (v%s).", APP_VER);
+            _snwprintf(g_status, 128, L"You are up to date (v%ls).", APP_VER);
         }
         g_status[127] = 0;
         free(json);
@@ -168,7 +168,7 @@ void UpdateInstall(void)
 
     wchar_t tmp[MAX_PATH];
     GetTempPathW(MAX_PATH, tmp);
-    _snwprintf(g_newPath, MAX_PATH, L"%s%s_%s.exe", tmp, APP_ID, g_newVer);
+    _snwprintf(g_newPath, MAX_PATH, L"%ls%ls_%ls.exe", tmp, APP_ID, g_newVer);
     g_newPath[MAX_PATH - 1] = 0;
 
     HANDLE f = CreateFileW(g_newPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
@@ -182,7 +182,7 @@ void UpdateInstall(void)
     // swap ourselves out after we exit, then relaunch
     wchar_t self[MAX_PATH], script[MAX_PATH], cmd[MAX_PATH * 3];
     GetModuleFileNameW(NULL, self, MAX_PATH);
-    _snwprintf(script, MAX_PATH, L"%s%s_update.cmd", tmp, APP_ID);
+    _snwprintf(script, MAX_PATH, L"%ls%ls_update.cmd", tmp, APP_ID);
     script[MAX_PATH - 1] = 0;
 
     FILE* s = _wfopen(script, L"wt");
@@ -190,13 +190,13 @@ void UpdateInstall(void)
     fwprintf(s, L"@echo off\r\n");
     fwprintf(s, L"ping -n 3 127.0.0.1 >nul\r\n");
     fwprintf(s, L":retry\r\n");
-    fwprintf(s, L"move /y \"%s\" \"%s\" >nul 2>&1\r\n", g_newPath, self);
+    fwprintf(s, L"move /y \"%ls\" \"%ls\" >nul 2>&1\r\n", g_newPath, self);
     fwprintf(s, L"if errorlevel 1 (ping -n 2 127.0.0.1 >nul & goto retry)\r\n");
-    fwprintf(s, L"start \"\" \"%s\"\r\n", self);
+    fwprintf(s, L"start \"\" \"%ls\"\r\n", self);
     fwprintf(s, L"del \"%%~f0\"\r\n");
     fclose(s);
 
-    _snwprintf(cmd, MAX_PATH * 3, L"/c \"%s\"", script);
+    _snwprintf(cmd, MAX_PATH * 3, L"/c \"%ls\"", script);
     ShellExecuteW(NULL, L"open", L"cmd.exe", cmd, NULL, SW_HIDE);
     AppExit();
 }

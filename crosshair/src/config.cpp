@@ -11,6 +11,7 @@ Profile   g_prof[MAXPROFILE];
 int       g_nprof = 0;
 Settings  g_set;
 wchar_t   g_lastGame[64] = L"";
+wchar_t   g_hotkeyLabel[24] = L"F12";
 wchar_t   g_activeLabel[64] = L"Default";
 int       g_activeProfile = -1;
 
@@ -20,16 +21,16 @@ static void CfgPath(wchar_t* out, int cch)
     if (FAILED(SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, base)))
         GetTempPathW(MAX_PATH, base);
     wchar_t dir[MAX_PATH];
-    _snwprintf(dir, MAX_PATH, L"%s\\%s", base, APP_ID); dir[MAX_PATH - 1] = 0;
+    _snwprintf(dir, MAX_PATH, L"%ls\\%ls", base, APP_ID); dir[MAX_PATH - 1] = 0;
     CreateDirectoryW(dir, NULL);
-    _snwprintf(out, cch, L"%s\\config.txt", dir); out[cch - 1] = 0;
+    _snwprintf(out, cch, L"%ls\\config.txt", dir); out[cch - 1] = 0;
 }
 
 static int Clamp(int v, int a, int b) { return v < a ? a : (v > b ? b : v); }
 
 static void WriteCh(FILE* f, const Crosshair* c)
 {
-    fwprintf(f, L"name %s\n", c->name[0] ? c->name : L"Custom");
+    fwprintf(f, L"name %ls\n", c->name[0] ? c->name : L"Custom");
     fwprintf(f, L"style %d\ncolor %08X\noutlineColor %08X\n",
              c->style, (unsigned)c->color, (unsigned)c->outlineColor);
     fwprintf(f, L"length %d\nthickness %d\ngap %d\ndotSize %d\n",
@@ -40,7 +41,7 @@ static void WriteCh(FILE* f, const Crosshair* c)
              c->gradient, (unsigned)c->gradColor, c->shadow, c->shadowX, c->shadowY);
     fwprintf(f, L"gridW %d\ngridH %d\npxScale %d\nimageScale %d\n",
              c->gridW, c->gridH, c->pxScale, c->imageScale);
-    if (c->image[0]) fwprintf(f, L"image %s\n", c->image);
+    if (c->image[0]) fwprintf(f, L"image %ls\n", c->image);
     for (int y = 0; y < c->gridH; y++)
         for (int x = 0; x < c->gridW; x++)
             if (c->px[y * MAXGRID + x] & 0xFF000000)
@@ -65,14 +66,14 @@ static int ReadChLine(Crosshair* c, const wchar_t* line)
         wchar_t* p = wcspbrk(c->image, L"\r\n"); if (p) *p = 0;
         return 1;
     }
-    if (swscanf(line, L"%63s %x", key, &u) == 2 &&
+    if (swscanf(line, L"%63ls %x", key, &u) == 2 &&
         (!wcscmp(key, L"color") || !wcscmp(key, L"outlineColor") || !wcscmp(key, L"gradColor"))) {
         if (!wcscmp(key, L"color")) c->color = u;
         else if (!wcscmp(key, L"gradColor")) c->gradColor = u;
         else c->outlineColor = u;
         return 1;
     }
-    if (swscanf(line, L"%63s %d", key, &a) != 2) return 0;
+    if (swscanf(line, L"%63ls %d", key, &a) != 2) return 0;
     if      (!wcscmp(key, L"style"))      c->style = Clamp(a, 0, ST_COUNT - 1);
     else if (!wcscmp(key, L"length"))     c->length = Clamp(a, 0, 200);
     else if (!wcscmp(key, L"thickness"))  c->thickness = Clamp(a, 1, 20);
@@ -107,9 +108,9 @@ void CfgSave(void)
     fwprintf(f, L"overlayOn %d\nonlyInGame %d\nautoDetect %d\nautoOpen %d\nstartWin %d\n",
              g_set.overlayOn, g_set.onlyInGame, g_set.autoDetect,
              g_set.autoOpenPanel, g_set.startWithWindows);
-    fwprintf(f, L"autoUpdate %d\npreviewZoom %d\naccent %d\nwinAlpha %d\npreviewEnv %d\n",
+    fwprintf(f, L"autoUpdate %d\npreviewZoom %d\naccent %d\nwinAlpha2 %d\npreviewEnv %d\n",
              g_set.autoUpdate, g_set.previewZoom, g_set.accent, g_set.winAlpha, g_set.previewEnv);
-    if (g_set.previewImage[0]) fwprintf(f, L"previewImage %s\n", g_set.previewImage);
+    if (g_set.previewImage[0]) fwprintf(f, L"previewImage %ls\n", g_set.previewImage);
 
     fwprintf(f, L"[crosshair]\n");
     WriteCh(f, &g_ch);
@@ -121,8 +122,8 @@ void CfgSave(void)
     }
     for (int i = 0; i < g_nprof; i++) {
         fwprintf(f, L"[profile]\n");
-        fwprintf(f, L"exe %s\n", g_prof[i].exe);
-        fwprintf(f, L"label %s\n", g_prof[i].label);
+        fwprintf(f, L"exe %ls\n", g_prof[i].exe);
+        fwprintf(f, L"label %ls\n", g_prof[i].label);
         fwprintf(f, L"autoLaunch %d\n", g_prof[i].autoLaunch);
         fwprintf(f, L"res %d %d\n", g_prof[i].lastW, g_prof[i].lastH);
         WriteCh(f, &g_prof[i].ch);
@@ -134,7 +135,7 @@ void CfgLoad(void)
 {
     ZeroMemory(&g_set, sizeof(g_set));
     g_set.overlayOn = 1; g_set.onlyInGame = 1; g_set.autoDetect = 1;
-    g_set.autoUpdate = 1; g_set.previewZoom = 2; g_set.winAlpha = 92; g_set.previewEnv = 0;
+    g_set.autoUpdate = 1; g_set.previewZoom = 2; g_set.winAlpha = 97; g_set.previewEnv = 0;
     ZeroMemory(g_libUsed, sizeof(g_libUsed));
     g_nprof = 0;
     ChDefault(&g_ch, 0);
@@ -196,7 +197,7 @@ void CfgLoad(void)
         if (target && ReadChLine(target, line)) continue;
 
         wchar_t key[64]; int v;
-        if (swscanf(line, L"%63s %d", key, &v) == 2) {
+        if (swscanf(line, L"%63ls %d", key, &v) == 2) {
             if      (!wcscmp(key, L"overlayOn"))  g_set.overlayOn = !!v;
             else if (!wcscmp(key, L"onlyInGame")) g_set.onlyInGame = !!v;
             else if (!wcscmp(key, L"autoDetect")) g_set.autoDetect = !!v;
@@ -204,7 +205,7 @@ void CfgLoad(void)
             else if (!wcscmp(key, L"startWin"))   g_set.startWithWindows = !!v;
             else if (!wcscmp(key, L"autoUpdate")) g_set.autoUpdate = !!v;
             else if (!wcscmp(key, L"accent"))     g_set.accent = Clamp(v, 0, 5);
-            else if (!wcscmp(key, L"winAlpha"))   g_set.winAlpha = Clamp(v, 40, 100);
+            else if (!wcscmp(key, L"winAlpha2"))  g_set.winAlpha = Clamp(v, 70, 100);
             else if (!wcscmp(key, L"previewEnv")) g_set.previewEnv = Clamp(v, 0, 4);
             else if (!wcscmp(key, L"previewZoom")) g_set.previewZoom = Clamp(v, 1, 8);
         }
@@ -221,7 +222,7 @@ void SetStartWithWindows(int on)
     if (on) {
         wchar_t exe[MAX_PATH], q[MAX_PATH + 8];
         GetModuleFileNameW(NULL, exe, MAX_PATH);
-        _snwprintf(q, MAX_PATH + 8, L"\"%s\" /tray", exe);
+        _snwprintf(q, MAX_PATH + 8, L"\"%ls\" /tray", exe);
         RegSetValueExW(k, APP_ID, 0, REG_SZ, (const BYTE*)q,
                        (DWORD)((wcslen(q) + 1) * sizeof(wchar_t)));
     } else {

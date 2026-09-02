@@ -7,8 +7,8 @@
 
 #define APP_NAME    L"DEADCENTER"
 #define APP_ID      L"DeadCenter"
-#define APP_VER     L"1.3.1"
-#define APP_VERNUM  10301
+#define APP_VER     L"1.4.0"
+#define APP_VERNUM  10400
 #define APP_CLASS   L"DeadCenterShell"
 #define OV_CLASS    L"DeadCenterOverlay"
 #define MSG_CLASS   L"DeadCenterMsg"
@@ -71,6 +71,7 @@ extern int       g_nprof;
 extern Settings  g_set;
 extern HINSTANCE g_inst;
 extern wchar_t   g_lastGame[64];
+extern wchar_t   g_hotkeyLabel[24];
 extern wchar_t   g_activeLabel[64];
 extern int       g_activeProfile;         // -1 = default crosshair
 

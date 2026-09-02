@@ -60,7 +60,7 @@ static COLORREF AccEdge(void) { return DcMix(DC_PANEL, Acc(), 84); }
 enum { SC_HOME, SC_STUDIO, SC_PRESETS, SC_PROFILES, SC_THEMES, SC_SETTINGS };
 enum { TAB_BASIC, TAB_SHAPE, TAB_FX, TAB_ADV };
 enum { WK_BTN, WK_TOGGLE, WK_SLIDER, WK_SWATCH, WK_NAV, WK_TAB, WK_TEXT,
-       WK_HEAD, WK_CARD, WK_ROW, WK_CHIP };
+       WK_HEAD, WK_CARD, WK_ROW, WK_CHIP, WK_SV, WK_HUE, WK_INK };
 enum { V_GHOST, V_ACCENT, V_CHIP, V_DANGER };
 
 enum {
@@ -76,6 +76,7 @@ enum {
     ID_SET = 450, ID_UPDCHECK = 460, ID_UPDINSTALL,
     ID_ENV = 470, ID_ZOOM = 480, ID_ACCENT = 490,
     ID_WINALPHA = 520, ID_SHADOW, ID_GRADIENT, ID_GRADCOL, ID_GOSTUDIO,
+    ID_CTARGET = 530, ID_SV = 534, ID_HUE, ID_SYSPICK,
     ID_MIN = 500, ID_HIDE, ID_CLOSE, ID_TOGGLEOVL, ID_PROFCHIP, ID_HOTKEYCHIP
 };
 enum { T_PEN, T_ERASE, T_FILL, T_LINE, T_RECT, T_CIRC, T_MIRX, T_MIRY };
@@ -130,6 +131,45 @@ static int       g_bw = 0, g_bh = 0;
 
 static int Clamp(int v, int a, int b) { return v < a ? a : (v > b ? b : v); }
 
+// ------------------------------------------------------------------ colour
+// The picker edits one of three targets and keeps its own HSV so dragging
+// through black or grey does not lose the hue.
+enum { CT_MAIN, CT_OUTLINE, CT_GRAD };
+static int g_ctarget = CT_MAIN;
+static int g_hue = 181, g_sat = 255, g_val = 253;
+static int g_dragSV = 0, g_dragHue = 0;
+
+static COLORREF HsvRef(int h, int sv, int vv)
+{
+    double S = sv / 255.0, V = vv / 255.0;
+    double C = V * S, X = C * (1 - fabs(fmod(h / 60.0, 2) - 1)), m = V - C;
+    double r = 0, g = 0, b = 0;
+    if      (h <  60) { r = C; g = X; }
+    else if (h < 120) { r = X; g = C; }
+    else if (h < 180) { g = C; b = X; }
+    else if (h < 240) { g = X; b = C; }
+    else if (h < 300) { r = X; b = C; }
+    else              { r = C; b = X; }
+    return RGB((int)((r + m) * 255 + 0.5), (int)((g + m) * 255 + 0.5), (int)((b + m) * 255 + 0.5));
+}
+
+static void RefToHsv(COLORREF c, int* h, int* sv, int* vv)
+{
+    double r = GetRValue(c) / 255.0, g = GetGValue(c) / 255.0, b = GetBValue(c) / 255.0;
+    double mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+    double mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+    double d = mx - mn, hh = 0;
+    if (d > 0.0001) {
+        if      (mx == r) hh = 60 * fmod((g - b) / d, 6);
+        else if (mx == g) hh = 60 * ((b - r) / d + 2);
+        else              hh = 60 * ((r - g) / d + 4);
+    }
+    if (hh < 0) hh += 360;
+    *h = (int)(hh + 0.5) % 360;
+    *sv = (int)((mx > 0 ? d / mx : 0) * 255 + 0.5);
+    *vv = (int)(mx * 255 + 0.5);
+}
+
 static void BufferFree(void)
 {
     if (g_bdc) { SelectObject(g_bdc, g_bold); DeleteDC(g_bdc); g_bdc = NULL; }
@@ -179,7 +219,7 @@ static void EnableBackdrop(HWND h)
 static void ApplyWindowAlpha(void)
 {
     if (!g_hwnd) return;
-    int pct = Clamp(g_set.winAlpha, 40, 100);
+    int pct = Clamp(g_set.winAlpha, 70, 100);
     LONG_PTR ex = GetWindowLongPtrW(g_hwnd, GWL_EXSTYLE);
     if (!(ex & WS_EX_LAYERED))
         SetWindowLongPtrW(g_hwnd, GWL_EXSTYLE, ex | WS_EX_LAYERED);
@@ -352,6 +392,42 @@ static void SetColor(uint32_t c)
     ApplyAndSave();
 }
 
+static uint32_t TargetColor(void)
+{
+    return g_ctarget == CT_OUTLINE ? g_ch.outlineColor
+         : g_ctarget == CT_GRAD    ? g_ch.gradColor
+                                   : g_ch.color;
+}
+
+// write the picked colour into whichever target is selected
+static void SetTargetColor(uint32_t rgb)
+{
+    rgb &= 0x00FFFFFF;
+    if (g_ctarget == CT_OUTLINE) {
+        g_ch.outlineColor = 0xE6000000 | rgb;
+        g_ch.outline = 1;
+        ApplyAndSave();
+    } else if (g_ctarget == CT_GRAD) {
+        g_ch.gradColor = 0xFF000000 | rgb;
+        g_ch.gradient = 1;
+        ApplyAndSave();
+    } else {
+        SetColor(rgb);
+    }
+}
+
+static void SyncHsvFromTarget(void)
+{
+    RefToHsv(ToRef(TargetColor()), &g_hue, &g_sat, &g_val);
+}
+
+static void PushHsv(void)
+{
+    COLORREF c = HsvRef(g_hue, g_sat, g_val);
+    SetTargetColor(((uint32_t)GetRValue(c) << 16) |
+                   ((uint32_t)GetGValue(c) << 8) | GetBValue(c));
+}
+
 // ------------------------------------------------------------------ layout
 static RECT CanvasRect(void)      // the live area inside the preview card
 {
@@ -384,7 +460,7 @@ static void LayoutChrome(void)
     q->icon = IC_MONITOR;
 
     W* k = Add(ID_HOTKEYCHIP, WK_CHIP, PVX + 434, 18, 190, 52, L"Overlay Hotkey");
-    wcscpy(k->sub, L"F12");
+    wcsncpy(k->sub, g_hotkeyLabel, 71); k->sub[71] = 0;
     k->icon = IC_KEY;
 
     static const wchar_t* nm[6] = { L"Home", L"Studio", L"Presets", L"Game Profiles", L"Themes", L"Settings" };
@@ -409,12 +485,6 @@ static void LayoutChrome(void)
 
 static void LayoutPreviewCard(void)
 {
-    static const wchar_t* en[5] = { L"Dark", L"Arena", L"Grass", L"Sky", L"Custom" };
-    for (int i = 0; i < 5; i++) {
-        W* p = Add(ID_ENV + i, WK_BTN, PVX + 200 + i * 66, PVY + 14, 60, 28, en[i]);
-        p->variant = V_CHIP;
-        p->active = (g_set.previewEnv == i);
-    }
     static const wchar_t* zn[3] = { L"100%", L"200%", L"400%" };
     static const int zv[3] = { 1, 2, 4 };
     for (int i = 0; i < 3; i++) {
@@ -427,13 +497,30 @@ static void LayoutPreviewCard(void)
 static void LayoutBasic(int y)
 {
     Head(RPX, &y, RPW, L"COLOR", IC_PALETTE);
-    for (int i = 0; i < 8; i++) {
-        W* p = Add(ID_SWATCH + i, WK_SWATCH, RPX + i * 44, y, 38, 38, NULL);
-        p->col = kPalette[i];
-        p->active = ((g_ch.color & 0x00FFFFFF) == (kPalette[i] & 0x00FFFFFF));
+    {
+        static const wchar_t* tn[3] = { L"Crosshair", L"Outline", L"Gradient" };
+        static const int ti[3] = { IC_CROSSHAIR, IC_OUTLINE, IC_PALETTE };
+        for (int i = 0; i < 3; i++) {
+            W* p = Add(ID_CTARGET + i, WK_BTN, RPX + i * 141, y, 133, 30, tn[i]);
+            p->variant = V_CHIP;
+            p->active = (g_ctarget == i);
+            p->icon = ti[i];
+        }
+        y += 40;
+
+        Add(ID_SV,  WK_SV,  RPX, y, 250, 124, NULL);
+        Add(ID_HUE, WK_HUE, RPX + 260, y, 22, 124, NULL);
+        Add(0, WK_INK, RPX + 294, y, 126, 124, NULL);
+        y += 134;
+
+        for (int i = 0; i < 8; i++) {
+            W* p = Add(ID_SWATCH + i, WK_SWATCH, RPX + i * 44, y, 38, 34, NULL);
+            p->col = kPalette[i];
+            p->active = ((TargetColor() & 0x00FFFFFF) == (kPalette[i] & 0x00FFFFFF));
+        }
+        Ic(Add(ID_SYSPICK, WK_BTN, RPX + 8 * 44, y, 68, 34, L""), IC_PLUS)->variant = V_CHIP;
+        y += 46;
     }
-    Ic(Add(ID_CUSTOMCOL, WK_BTN, RPX + 8 * 44, y, 38, 38, L""), IC_PLUS)->variant = V_CHIP;
-    y += 56;
 
     Slider(ID_OPACITY, RPX, y, RPW, L"OPACITY", &g_ch.opacity, 10, 255, L"", IC_DROP);
     y += 58;
@@ -449,9 +536,8 @@ static void LayoutBasic(int y)
     y += 66;
 
     Head(RPX, &y, RPW, L"OFFSET", IC_CROSSHAIR);
-    Slider(ID_OFFX, RPX, y, RPW - 130, L"HORIZONTAL", &g_ch.offsetX, -60, 60, L"px", IC_ARROWX);
-    y += 56;
-    Slider(ID_OFFY, RPX, y, RPW - 130, L"VERTICAL", &g_ch.offsetY, -60, 60, L"px", IC_ARROWY);
+    Slider(ID_OFFX, RPX, y, HALF, L"HORIZONTAL", &g_ch.offsetX, -60, 60, L"px", IC_ARROWX);
+    Slider(ID_OFFY, RPX + HALF + 20, y, HALF, L"VERTICAL", &g_ch.offsetY, -60, 60, L"px", IC_ARROWY);
 }
 
 static void LayoutShape(int y)
@@ -490,7 +576,7 @@ static void LayoutFx(int y)
     y += 58;
     Head(RPX, &y, RPW, L"OUTLINE", IC_OUTLINE);
     Toggle(ID_OUTLINE, RPX, &y, RPW, L"Draw outline", &g_ch.outline, IC_OUTLINE);
-    Ic(Add(ID_OUTLINECOL, WK_BTN, RPX, y, RPW, 34, L"Outline colour"), IC_PALETTE)->variant = V_GHOST;
+    Ic(Add(ID_OUTLINECOL, WK_BTN, RPX, y, RPW, 34, L"Edit outline colour"), IC_PALETTE)->variant = V_GHOST;
     y += 48;
     Head(RPX, &y, RPW, L"SHADOW", IC_SHAPE);
     Slider(ID_SHADOW, RPX, y, HALF, L"STRENGTH", &g_ch.shadow, 0, 100, L"%", IC_DROP);
@@ -498,7 +584,7 @@ static void LayoutFx(int y)
     y += 56;
     Head(RPX, &y, RPW, L"GRADIENT", IC_PALETTE);
     Toggle(ID_GRADIENT, RPX, &y, RPW, L"Blend to a second colour", &g_ch.gradient, IC_PALETTE);
-    Ic(Add(ID_GRADCOL, WK_BTN, RPX, y, RPW, 34, L"Gradient colour"), IC_PALETTE)->variant = V_GHOST;
+    Ic(Add(ID_GRADCOL, WK_BTN, RPX, y, RPW, 34, L"Edit gradient colour"), IC_PALETTE)->variant = V_GHOST;
     y += 48;
     Head(RPX, &y, RPW, L"ALPHA", IC_EYE);
     Slider(ID_OPACITY, RPX, y, RPW, L"OPACITY", &g_ch.opacity, 10, 255, L"", IC_DROP);
@@ -513,7 +599,7 @@ static void LayoutAdv(int y)
     {
         const wchar_t* n = g_ch.image[0] ? wcsrchr(g_ch.image, L'\\') : NULL;
         wchar_t t[72];
-        _snwprintf(t, 72, L"%s", g_ch.image[0] ? (n ? n + 1 : g_ch.image) : L"No image loaded");
+        _snwprintf(t, 72, L"%ls", g_ch.image[0] ? (n ? n + 1 : g_ch.image) : L"No image loaded");
         t[71] = 0;
         Add(0, WK_TEXT, RPX, y, RPW, 18, t);
         y += 26;
@@ -603,7 +689,7 @@ static void LayoutStudio(void)
         p->col = kPalette[i];
         p->active = ((g_ch.color & 0x00FFFFFF) == (kPalette[i] & 0x00FFFFFF));
     }
-    Ic(Add(ID_CUSTOMCOL, WK_BTN, RPX + 8 * 44, y, 38, 38, L""), IC_PLUS)->variant = V_CHIP;
+    Ic(Add(ID_SYSPICK, WK_BTN, RPX + 8 * 44, y, 38, 38, L""), IC_PLUS)->variant = V_CHIP;
     y += 58;
     Head(RPX, &y, RPW, L"CANVAS", IC_GRID);
     static const int gs[4] = { 16, 24, 32, 48 };
@@ -625,16 +711,28 @@ static void LayoutStudio(void)
 
 static void LayoutPresetsScreen(void)
 {
+    const int COLS = 6, CW = 140, CH = 150, PITCH = 152, ROW = 170;
     int n = ChPresetCount();
+    int y = PVY + 40;
     for (int i = 0; i < n; i++) {
-        W* p = Add(ID_PRESET + i, WK_CARD, PVX + (i % 6) * 152, PVY + 40 + (i / 6) * 170, 140, 150, ChPresetName(i));
-        wcsncpy(p->sub, kPresetSub[i], 71); p->sub[71] = 0;
+        W* p = Add(ID_PRESET + i, WK_CARD, PVX + (i % COLS) * PITCH, y + (i / COLS) * ROW,
+                   CW, CH, ChPresetName(i));
+        wcsncpy(p->sub, kPresetSub[i], 71);
+        p->sub[71] = 0;
     }
+
+    // library starts a full row below whatever the presets used
+    int rows = (n + COLS - 1) / COLS;
+    int ly = y + rows * ROW + 34;
+    int slot = 0;
     for (int i = 0; i < MAXLIB; i++) {
         if (!g_libUsed[i]) continue;
-        W* p = Add(ID_LIB + i, WK_CARD, PVX + (i % 6) * 152, PVY + 260 + (i / 6) * 170, 140, 150, g_lib[i].name);
+        W* p = Add(ID_LIB + i, WK_CARD, PVX + (slot % COLS) * PITCH, ly + (slot / COLS) * ROW,
+                   CW, CH, g_lib[i].name[0] ? g_lib[i].name : L"Saved");
         wcscpy(p->sub, L"Saved");
+        slot++;
     }
+    Add(0, WK_HEAD, PVX, ly - 24, 300, 15, L"YOUR LIBRARY")->icon = IC_SAVE;
 }
 
 static void LayoutProfiles(void)
@@ -644,7 +742,7 @@ static void LayoutProfiles(void)
     for (int i = 0; i < g_nprof; i++) {
         W* row = Add(ID_PROF + i, WK_ROW, x, y, w, 78, g_prof[i].label);
         wchar_t s[72];
-        _snwprintf(s, 72, L"%s  \x2022  %s  \x2022  %d\x00D7%d", g_prof[i].exe,
+        _snwprintf(s, 72, L"%ls  \x2022  %ls  \x2022  %d\x00D7%d", g_prof[i].exe,
                    g_prof[i].ch.name[0] ? g_prof[i].ch.name : L"Custom",
                    g_prof[i].lastW, g_prof[i].lastH);
         s[71] = 0;
@@ -658,7 +756,7 @@ static void LayoutProfiles(void)
     }
     if (g_nprof < MAXPROFILE) {
         wchar_t t[72];
-        _snwprintf(t, 72, g_lastGame[0] ? L"ADD %s" : L"NO GAME DETECTED YET", g_lastGame);
+        _snwprintf(t, 72, g_lastGame[0] ? L"ADD %ls" : L"NO GAME DETECTED YET", g_lastGame);
         t[71] = 0;
         W* b = Add(ID_PROFADD, WK_BTN, x, y + 10, 360, 44, t);
         b->variant = g_lastGame[0] ? V_ACCENT : V_GHOST;
@@ -670,7 +768,7 @@ static void LayoutThemes(void)
 {
     int y = PVY + 46;
     Slider(ID_WINALPHA, PVX, WINH - 130, 420, L"WINDOW TRANSPARENCY",
-           &g_set.winAlpha, 40, 100, L"%", IC_DROP);
+           &g_set.winAlpha, 70, 100, L"%", IC_DROP);
     for (int i = 0; i < 6; i++) {
         W* p = Add(ID_ACCENT + i, WK_CARD, PVX + i * 152, y, 140, 120, kAccentName[i]);
         p->col = 0xFF000000 | ((uint32_t)GetRValue(kAccents[i]) << 16) |
@@ -694,7 +792,7 @@ static void LayoutSettings(void)
     Toggle(ID_SET + 4, x, &y, w, L"Start with Windows", &g_set.startWithWindows, IC_POWER);
     y += 8;
     Head(x, &y, w, L"APPEARANCE", IC_EYE);
-    Slider(ID_WINALPHA, x, y, w, L"WINDOW TRANSPARENCY", &g_set.winAlpha, 40, 100, L"%", IC_DROP);
+    Slider(ID_WINALPHA, x, y, w, L"WINDOW TRANSPARENCY", &g_set.winAlpha, 70, 100, L"%", IC_DROP);
     y += 44;
     Add(0, WK_TEXT, x, y, w, 18,
         L"Drag left to see more of your desktop through the app.");
@@ -707,9 +805,14 @@ static void LayoutSettings(void)
     y += 50;
     Add(0, WK_TEXT, x, y, w, 18, UpdateStatusText());
     y += 30;
-    wchar_t v[64]; _snwprintf(v, 64, L"%s  v%s", APP_NAME, APP_VER); v[63] = 0;
+    wchar_t v[64]; _snwprintf(v, 64, L"%ls  v%ls", APP_NAME, APP_VER); v[63] = 0;
     Add(0, WK_TEXT, x, y, w, 18, v);
-    Add(0, WK_TEXT, x, y + 22, w, 18, L"F12 hides or brings back this window from anywhere.");
+    {
+        wchar_t hk[96];
+        _snwprintf(hk, 96, L"%ls hides or brings back this window from anywhere.", g_hotkeyLabel);
+        hk[95] = 0;
+        Add(0, WK_TEXT, x, y + 22, w, 18, hk);
+    }
 }
 
 static void Layout(void)
@@ -1008,7 +1111,7 @@ static void PaintWidget(HDC dc, W* p, int hover)
         wchar_t num[24];
         if (p->sub[0] == L'%')      _snwprintf(num, 24, L"%d%%", v * 100 / (p->mx ? p->mx : 100));
         else if (p->id == ID_OPACITY) _snwprintf(num, 24, L"%d%%", v * 100 / 255);
-        else                        _snwprintf(num, 24, L"%d %s", v, p->sub);
+        else                        _snwprintf(num, 24, L"%d %ls", v, p->sub);
         num[23] = 0;
         Txt(dc, bx, num, C_TXT, g_fs, DT_CENTER | DT_VCENTER);
         break;
@@ -1025,6 +1128,63 @@ static void PaintWidget(HDC dc, W* p, int hover)
             RECT s2; SetRect(&s2, p->r.left, p->r.bottom - 24, p->r.right, p->r.bottom - 8);
             Txt(dc, s2, p->sub, C_TXT2, g_fxs, DT_CENTER | DT_VCENTER);
         }
+        break;
+    }
+
+    case WK_SV: {
+        int w = p->r.right - p->r.left, hh = p->r.bottom - p->r.top;
+        for (int y = 0; y < hh; y += 3)
+            for (int x = 0; x < w; x += 4) {
+                RECT q; SetRect(&q, p->r.left + x, p->r.top + y,
+                                p->r.left + (x + 4 > w ? w : x + 4),
+                                p->r.top + (y + 3 > hh ? hh : y + 3));
+                Fill(dc, q, HsvRef(g_hue, x * 255 / (w - 1), 255 - y * 255 / (hh - 1)));
+            }
+        HPEN bp = CreatePen(PS_SOLID, 1, C_BORDER);
+        HGDIOBJ obp = SelectObject(dc, bp), obb = SelectObject(dc, GetStockObject(NULL_BRUSH));
+        Rectangle(dc, p->r.left, p->r.top, p->r.right, p->r.bottom);
+        int kx = p->r.left + g_sat * (w - 1) / 255;
+        int ky = p->r.top + (255 - g_val) * (hh - 1) / 255;
+        HPEN kp = CreatePen(PS_SOLID, 2, (g_val > 150 && g_sat < 160) ? RGB(20,20,20) : RGB(255,255,255));
+        SelectObject(dc, kp);
+        Ellipse(dc, kx - 6, ky - 6, kx + 6, ky + 6);
+        SelectObject(dc, obp); SelectObject(dc, obb);
+        DeleteObject(bp); DeleteObject(kp);
+        break;
+    }
+
+    case WK_HUE: {
+        int hh = p->r.bottom - p->r.top;
+        for (int y = 0; y < hh; y += 2) {
+            RECT q; SetRect(&q, p->r.left, p->r.top + y, p->r.right,
+                            p->r.top + (y + 2 > hh ? hh : y + 2));
+            Fill(dc, q, HsvRef(y * 359 / (hh - 1), 255, 255));
+        }
+        HPEN bp = CreatePen(PS_SOLID, 1, C_BORDER);
+        HGDIOBJ obp = SelectObject(dc, bp), obb = SelectObject(dc, GetStockObject(NULL_BRUSH));
+        Rectangle(dc, p->r.left, p->r.top, p->r.right, p->r.bottom);
+        int ky = p->r.top + g_hue * (hh - 1) / 359;
+        HPEN kp = CreatePen(PS_SOLID, 2, RGB(255, 255, 255));
+        SelectObject(dc, kp);
+        MoveToEx(dc, p->r.left - 1, ky, NULL); LineTo(dc, p->r.right + 1, ky);
+        SelectObject(dc, obp); SelectObject(dc, obb);
+        DeleteObject(bp); DeleteObject(kp);
+        break;
+    }
+
+    case WK_INK: {
+        uint32_t c = TargetColor();
+        RECT sw; SetRect(&sw, p->r.left, p->r.top, p->r.right, p->r.top + 68);
+        Card(dc, sw, ToRef(c), C_BORDER, 8);
+        wchar_t hex[24];
+        _snwprintf(hex, 24, L"#%02X%02X%02X", (unsigned)((c >> 16) & 0xFF),
+                   (unsigned)((c >> 8) & 0xFF), (unsigned)(c & 0xFF));
+        hex[23] = 0;
+        RECT t; SetRect(&t, p->r.left, p->r.top + 74, p->r.right, p->r.top + 94);
+        Txt(dc, t, hex, C_TXT, g_fb, DT_CENTER | DT_VCENTER);
+        static const wchar_t* tn[3] = { L"crosshair", L"outline", L"gradient" };
+        SetRect(&t, p->r.left, p->r.top + 96, p->r.right, p->r.top + 114);
+        Txt(dc, t, tn[g_ctarget], C_TXT2, g_fxs, DT_CENTER | DT_VCENTER);
         break;
     }
 
@@ -1126,7 +1286,7 @@ static void PaintSidebar(HDC dc)
     {
         wchar_t sub[64];
         int rw = 0, rh = 0; OverlayResolution(&rw, &rh);
-        _snwprintf(sub, 64, L"%s \x2022 %dp", g_activeLabel, rh); sub[63] = 0;
+        _snwprintf(sub, 64, L"%ls \x2022 %dp", g_activeLabel, rh); sub[63] = 0;
         TxtAt(dc, 80, cy + 66, SIDEW - 112, 16, sub, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
     }
 
@@ -1135,12 +1295,12 @@ static void PaintSidebar(HDC dc)
     TxtAt(dc, 56, cy + 122, SIDEW - 96, 16, g_status, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
 
     TxtAt(dc, 40, cy + 182, 120, 18, L"Toggle Hotkey", C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
-    RECT hk; SetRect(&hk, SIDEW - 76, cy + 178, SIDEW - 40, cy + 202);
+    RECT hk; SetRect(&hk, SIDEW - 120, cy + 178, SIDEW - 30, cy + 202);
     Card(dc, hk, C_RAISED, C_BORDER, 7);
-    Txt(dc, hk, L"F12", C_TXT, g_fs, DT_CENTER | DT_VCENTER);
+    Txt(dc, hk, g_hotkeyLabel, C_TXT, g_fxs, DT_CENTER | DT_VCENTER);
 
     wchar_t ver[64];
-    _snwprintf(ver, 64, L"v%s   \x2022   %s", APP_VER,
+    _snwprintf(ver, 64, L"v%ls   \x2022   %ls", APP_VER,
                UpdateAvailable() ? L"Update ready" : L"Up to date"); ver[63] = 0;
     TxtAt(dc, 24, WINH - 32, SIDEW - 40, 18, ver, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
 }
@@ -1387,7 +1547,17 @@ static void Command(int id)
         ShellStatus(kStyleName[st]);
         return;
     }
-    if (id >= ID_SWATCH && id < ID_SWATCH + 8) { SetColor(kPalette[id - ID_SWATCH]); return; }
+    if (id >= ID_SWATCH && id < ID_SWATCH + 8) {
+        SetTargetColor(kPalette[id - ID_SWATCH]);
+        SyncHsvFromTarget();
+        return;
+    }
+    if (id >= ID_CTARGET && id < ID_CTARGET + 3) {
+        g_ctarget = id - ID_CTARGET;
+        SyncHsvFromTarget();
+        ShellRedraw();
+        return;
+    }
     if (id >= ID_TOOL && id < ID_TOOL + 8) {
         int t = id - ID_TOOL;
         if (t == T_MIRX) g_mirX = !g_mirX;
@@ -1490,9 +1660,12 @@ static void Command(int id)
 
     switch (id) {
     case ID_ONLYGAME:   g_set.onlyInGame = !g_set.onlyInGame; CfgSave(); ShellGameChanged(); ShellRedraw(); break;
-    case ID_CUSTOMCOL:  PickColor(0); break;
-    case ID_OUTLINECOL: PickColor(1); break;
-    case ID_GRADCOL:    PickColor(2); break;
+    case ID_CUSTOMCOL:
+    case ID_SYSPICK:    PickColor(g_ctarget); SyncHsvFromTarget(); break;
+    case ID_OUTLINECOL: g_ctarget = CT_OUTLINE; g_tab = TAB_BASIC;
+                        SyncHsvFromTarget(); ShellRedraw(); break;
+    case ID_GRADCOL:    g_ctarget = CT_GRAD; g_ch.gradient = 1; g_tab = TAB_BASIC;
+                        SyncHsvFromTarget(); ApplyAndSave(); break;
     case ID_GRADIENT:   g_ch.gradient = !g_ch.gradient; ApplyAndSave(); break;
     case ID_GOSTUDIO:   g_screen = SC_STUDIO; ShellRedraw(); break;
 
@@ -1571,6 +1744,18 @@ static int PixelCell(int x, int y, int* cx, int* cy)
     return 1;
 }
 
+static void PickerDrag(W* p, int x, int y)
+{
+    int w = p->r.right - p->r.left, hh = p->r.bottom - p->r.top;
+    if (g_dragHue) {
+        g_hue = Clamp((y - p->r.top) * 359 / (hh > 1 ? hh - 1 : 1), 0, 359);
+    } else {
+        g_sat = Clamp((x - p->r.left) * 255 / (w > 1 ? w - 1 : 1), 0, 255);
+        g_val = 255 - Clamp((y - p->r.top) * 255 / (hh > 1 ? hh - 1 : 1), 0, 255);
+    }
+    PushHsv();
+}
+
 static void SliderDrag(W* p, int x)
 {
     int boxw = 62, w = (p->r.right - p->r.left) - boxw - 10;
@@ -1619,6 +1804,13 @@ static LRESULT CALLBACK ShellProc(HWND h, UINT m, WPARAM w, LPARAM l)
         if (m == WM_LBUTTONDOWN) {
             int i = HitWidget(x, y);
             if (i >= 0) {
+                if (g_w[i].kind == WK_SV || g_w[i].kind == WK_HUE) {
+                    g_dragSV  = (g_w[i].kind == WK_SV);
+                    g_dragHue = (g_w[i].kind == WK_HUE);
+                    SetCapture(h);
+                    PickerDrag(&g_w[i], x, y);
+                    return 0;
+                }
                 if (g_w[i].kind == WK_SLIDER) {
                     g_dragSlider = g_w[i].id;
                     SetCapture(h);
@@ -1633,6 +1825,13 @@ static LRESULT CALLBACK ShellProc(HWND h, UINT m, WPARAM w, LPARAM l)
 
     case WM_MOUSEMOVE: {
         int x = (int)(GET_X_LPARAM(l) / g_ds), y = (int)(GET_Y_LPARAM(l) / g_ds);
+        if (g_dragSV || g_dragHue) {
+            Layout();
+            int want = g_dragSV ? ID_SV : ID_HUE;
+            for (int i = 0; i < g_nw; i++)
+                if (g_w[i].id == want) { PickerDrag(&g_w[i], x, y); break; }
+            return 0;
+        }
         if (g_dragSlider >= 0) {
             Layout();
             for (int i = 0; i < g_nw; i++)
@@ -1659,6 +1858,7 @@ static LRESULT CALLBACK ShellProc(HWND h, UINT m, WPARAM w, LPARAM l)
 
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
+        if (g_dragSV || g_dragHue) { g_dragSV = g_dragHue = 0; ReleaseCapture(); CfgSave(); return 0; }
         if (g_dragSlider >= 0) { g_dragSlider = -1; ReleaseCapture(); CfgSave(); return 0; }
         if (g_drawing) {
             if (g_shape && g_cx >= 0) {

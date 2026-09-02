@@ -61,6 +61,44 @@ static BOOL IsFullscreen(HWND fg)
            wr.right >= m.right - 2 && wr.bottom >= m.bottom - 2;
 }
 
+struct FindGame { wchar_t exe[64]; HWND wnd; };
+
+static BOOL CALLBACK FindGameProc(HWND w, LPARAM lp)
+{
+    FindGame* fgm = (FindGame*)lp;
+    if (!IsWindowVisible(w) || IsIconic(w)) return TRUE;
+    if (GetWindow(w, GW_OWNER)) return TRUE;
+    if (w == GetShellWindow()) return TRUE;
+    if (GetWindowTextLengthW(w) == 0) return TRUE;
+
+    wchar_t exe[64] = L"";
+    if (!ForegroundExe(w, exe, 64) || Ignored(exe)) return TRUE;
+
+    if (ProfileFind(exe) >= 0) {                 // a profile always wins
+        wcsncpy(fgm->exe, exe, 63); fgm->exe[63] = 0;
+        fgm->wnd = w;
+        return FALSE;
+    }
+    if (g_set.autoDetect && IsFullscreen(w) && !fgm->exe[0]) {
+        wcsncpy(fgm->exe, exe, 63); fgm->exe[63] = 0;
+        fgm->wnd = w;
+    }
+    return TRUE;
+}
+
+// Called when nothing game-like has focus, so a game that was already running
+// before DEADCENTER started is still picked up.
+static BOOL RunningGame(wchar_t* out, HWND* wnd)
+{
+    FindGame f;
+    f.exe[0] = 0; f.wnd = NULL;
+    EnumWindows(FindGameProc, (LPARAM)&f);
+    if (!f.exe[0]) return FALSE;
+    wcsncpy(out, f.exe, 63); out[63] = 0;
+    if (wnd) *wnd = f.wnd;
+    return TRUE;
+}
+
 static void Scan(void)
 {
     HWND fg = GetForegroundWindow();
@@ -72,13 +110,27 @@ static void Scan(void)
         prof = ProfileFind(exe);
         if (prof >= 0) game = TRUE;
         else if (g_set.autoDetect && IsFullscreen(fg)) game = TRUE;
-        if (game) wcsncpy(g_lastGame, exe, 63);
+        if (game) { wcsncpy(g_lastGame, exe, 63); g_lastGame[63] = 0; }
+    }
+
+    // Nothing game-like in focus: look for one that is merely running, so the
+    // right profile and status are picked up even when we were opened second.
+    HWND gw = NULL;
+    if (!game) {
+        wchar_t bg[64] = L"";
+        if (RunningGame(bg, &gw)) {
+            wcsncpy(g_lastGame, bg, 63); g_lastGame[63] = 0;
+            prof = ProfileFind(bg);
+        } else if (!fg || !ForegroundExe(fg, exe, 64) || Ignored(exe)) {
+            /* keep the last known game */
+        }
     }
 
     if (game) OverlaySetMonitorFrom(fg);
+    else if (gw) OverlaySetMonitorFrom(gw);
 
     // auto-switch to the profile that owns this game
-    if (game && prof >= 0 && g_prof[prof].autoLaunch && prof != g_activeProfile) {
+    if (prof >= 0 && g_prof[prof].autoLaunch && prof != g_activeProfile) {
         g_activeProfile = prof;
         memcpy(&g_ch, &g_prof[prof].ch, sizeof(Crosshair));
         wcsncpy(g_activeLabel, g_prof[prof].label, 63);
@@ -94,7 +146,7 @@ static void Scan(void)
         g_inGame = game;
         wchar_t s[160];
         if (game) {
-            _snwprintf(s, 160, L"%s \x2014 overlay active", PrettyGameName(g_lastGame));
+            _snwprintf(s, 160, L"%ls \x2014 overlay active", PrettyGameName(g_lastGame));
             if (g_set.autoOpenPanel) { TrayShow(TRUE); ShellShow(TRUE); }
         } else {
             wcscpy(s, g_set.onlyInGame ? L"Waiting for a game" : L"Overlay always on");
@@ -172,8 +224,8 @@ void TrayShow(BOOL show)
         g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         g_nid.uCallbackMessage = WM_TRAY;
         g_nid.hIcon = MakeIcon();
-        _snwprintf(g_nid.szTip, 127, L"%s \x2014 %s \x2014 F12", APP_NAME,
-                   g_lastGame[0] ? PrettyGameName(g_lastGame) : L"no game");
+        _snwprintf(g_nid.szTip, 127, L"%ls \x2014 %ls \x2014 %ls", APP_NAME,
+                   g_lastGame[0] ? PrettyGameName(g_lastGame) : L"no game", g_hotkeyLabel);
         g_nid.szTip[127] = 0;
         Shell_NotifyIconW(NIM_ADD, &g_nid);
     } else {
@@ -272,8 +324,32 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmd, int show)
         }
     }
 
-    if (!RegisterHotKey(g_msg, HOTKEY_ID, 0, VK_F12))
-        ShellStatus(L"F12 is taken - use the tray icon.");
+    {   // F12 is often claimed by an overlay; fall back rather than give up
+        static const struct { UINT mod; const wchar_t* label; } tryKeys[] = {
+            { 0,             L"F12" },
+            { MOD_CONTROL,   L"Ctrl+F12" },
+            { MOD_ALT,       L"Alt+F12" },
+            { MOD_SHIFT,     L"Shift+F12" },
+            { MOD_CONTROL | MOD_SHIFT, L"Ctrl+Shift+F12" }
+        };
+        BOOL got = FALSE;
+        for (int i = 0; i < 5 && !got; i++) {
+            if (RegisterHotKey(g_msg, HOTKEY_ID, tryKeys[i].mod, VK_F12)) {
+                wcsncpy(g_hotkeyLabel, tryKeys[i].label, 23);
+                g_hotkeyLabel[23] = 0;
+                got = TRUE;
+            }
+        }
+        if (!got) {
+            wcscpy(g_hotkeyLabel, L"none");
+            ShellStatus(L"No F12 combo was free - use the tray icon");
+        } else if (wcscmp(g_hotkeyLabel, L"F12")) {
+            wchar_t s[80];
+            _snwprintf(s, 80, L"F12 was taken - using %ls", g_hotkeyLabel);
+            s[79] = 0;
+            ShellStatus(s);
+        }
+    }
 
     BOOL silent = (cmd && wcsstr(cmd, L"/tray") != NULL);
     TrayShow(TRUE);
