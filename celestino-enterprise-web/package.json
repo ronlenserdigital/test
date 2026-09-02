@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "format": "prettier --write .",
+    "test": "playwright test",
+    "screenshots": "node scripts/screenshots.mjs",
+    "check:placeholders": "node scripts/check-placeholders.mjs",
+    "verify": "pnpm typecheck && pnpm lint && pnpm check:placeholders && pnpm build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
