@@ -183,8 +183,7 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
 {
     ZeroMemory(out, sizeof(*out));
 
-    if (c->style == ST_IMAGE) {
-        if (!LoadImage32(c->image)) return FALSE;
+    if (c->style == ST_IMAGE && c->image[0] && LoadImage32(c->image)) {
         int w = max(1, g_imgW * c->imageScale / 100);
         int h = max(1, g_imgH * c->imageScale / 100);
         if (w > 4096 || h > 4096) return FALSE;
@@ -225,6 +224,8 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
     }
 
     // parametric styles: odd-sized canvas so there is one true centre pixel
+    int style = c->style;
+    if (style == ST_IMAGE || style == ST_PIXEL) style = ST_CROSS;   // no source -> draw a cross
     int t   = max(1, c->thickness);
     int len = max(0, c->length);
     int gap = max(0, c->gap);
@@ -240,38 +241,43 @@ BOOL ChBuild(const Crosshair* c, ChBitmap* out)
     uint32_t col = c->color | 0xFF000000;
     int a0 = half - (t / 2), a1 = a0 + t - 1;      // arm band around centre
 
-    switch (c->style) {
+    switch (style) {
     case ST_CROSS:
     case ST_TSHAPE:
         if (len > 0) {
             Bar(half + gap + 1, a0, half + gap + len, a1, col);          // right
             Bar(half - gap - len, a0, half - gap - 1, a1, col);          // left
             Bar(a0, half + gap + 1, a1, half + gap + len, col);          // down
-            if (c->style == ST_CROSS)
+            if (style == ST_CROSS)
                 Bar(a0, half - gap - len, a1, half - gap - 1, col);      // up
         }
         break;
     case ST_CIRCLE: {
         double r = gap + len;
-        double inner = r - t / 2.0, outer = r + t / 2.0;
+        if (r < 1.0) r = 1.0;
+        double inner = r - t / 2.0, outer = inner + t;
         for (int y = -half; y <= half; y++)
             for (int x = -half; x <= half; x++) {
                 double d = sqrt((double)x * x + (double)y * y);
-                if (d >= inner - 0.5 && d <= outer + 0.5) Px(half + x, half + y, col);
+                if (d >= inner && d < outer) Px(half + x, half + y, col);
             }
         break;
     }
-    case ST_CHEVRON:
+    case ST_CHEVRON: {
+        // arms open downward from an apex `gap` under the aim point, then the
+        // whole glyph is lifted so its centre of mass sits on the anchor
+        int lift = (len + t) / 2;
         for (int i = 0; i <= len; i++)
             for (int k = 0; k < t; k++) {
-                Px(half - i, half + gap + i + k, col);
-                Px(half + i, half + gap + i + k, col);
+                Px(half - i, half - lift + gap + i + k, col);
+                Px(half + i, half - lift + gap + i + k, col);
             }
         break;
+    }
     default: break;
     }
 
-    if (c->centerDot || c->style == ST_DOT) {
+    if (c->centerDot || style == ST_DOT) {
         int d0 = half - (dot / 2), d1 = d0 + dot - 1;
         Bar(d0, d0, d1, d1, col);
     }

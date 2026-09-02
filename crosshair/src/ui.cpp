@@ -398,15 +398,23 @@ static void LayoutRightPanel(void)
     Ic(Add(ID_LIBSAVE, WK_BTN, RPX + RPW - 166, WINH - 78, 166, 48, L"SAVE PRESET"), IC_SAVE)->variant = V_GHOST;
 }
 
+#define STRIP_SLOTS 6
+#define STRIP_GAP    10
+#define STRIP_W      ((PVW - 32 - (STRIP_SLOTS - 1) * STRIP_GAP) / STRIP_SLOTS)
+
 static void LayoutPresetStrip(void)
 {
     int n = ChPresetCount();
-    for (int i = 0; i < n && i < 6; i++) {
-        W* p = Add(ID_PRESET + i, WK_CARD, PVX + 16 + i * 132, PVY + PVH + 62, 122, 120, ChPresetName(i));
+    int y = PVY + PVH + 72;
+    for (int i = 0; i < n && i < STRIP_SLOTS - 1; i++) {
+        W* p = Add(ID_PRESET + i, WK_CARD, PVX + 16 + i * (STRIP_W + STRIP_GAP), y,
+                   STRIP_W, 96, ChPresetName(i));
         wcsncpy(p->sub, kPresetSub[i], 71); p->sub[71] = 0;
     }
-    W* np = Add(ID_LIBSAVE, WK_CARD, PVX + 16 + 6 * 132, PVY + PVH + 62, 122, 120, L"New Preset");
+    W* np = Add(ID_LIBSAVE, WK_CARD, PVX + 16 + (STRIP_SLOTS - 1) * (STRIP_W + STRIP_GAP), y,
+                STRIP_W, 96, L"New Preset");
     np->variant = V_CHIP;
+    np->icon = IC_PLUS;
 }
 
 static void LayoutStudio(void)
@@ -626,16 +634,25 @@ static void PaintThumb(HDC dc, RECT r, const Crosshair* c, int lift)
     ChBitmap cb;
     Crosshair t = *c;
     if (!ChBuild(&t, &cb)) return;
-    int box = (r.right - r.left) - 30;
-    int scale = 1;
-    while (cb.w * (scale + 1) <= box && scale < 3) scale++;
-    int cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2 - lift;
-    for (int y = 0; y < cb.h; y++)
-        for (int x = 0; x < cb.w; x++) {
+    int box = (r.right - r.left) - 22;
+    int boxy = (r.bottom - r.top) - 34;
+    if (boxy < box) box = boxy;
+    if (box < 8) box = 8;
+
+    int span = cb.w > cb.h ? cb.w : cb.h;
+    int scale = 1, step = 1;
+    if (span > box) step = (span + box - 1) / box;              // shrink big reticles
+    else while (span * (scale + 1) <= box && scale < 3) scale++;
+
+    int cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2 - lift / 2;
+    for (int y = 0; y < cb.h; y += step)
+        for (int x = 0; x < cb.w; x += step) {
             uint32_t p = cb.px[y * cb.w + x];
             if (((p >> 24) & 0xFF) < 40) continue;
-            int dx = cx + (x - cb.ax) * scale, dy = cy + (y - cb.ay) * scale;
-            if (dx < r.left + 8 || dx > r.right - 8 - scale || dy < r.top + 8 || dy > r.bottom - 30) continue;
+            int dx = cx + ((x - cb.ax) / step) * scale;
+            int dy = cy + ((y - cb.ay) / step) * scale;
+            if (dx < r.left + 6 || dx > r.right - 6 - scale) continue;
+            if (dy < r.top + 6 || dy > r.bottom - 32) continue;
             RECT q; SetRect(&q, dx, dy, dx + scale, dy + scale);
             Fill(dc, q, ToRef(p));
         }
@@ -778,6 +795,9 @@ static void PaintWidget(HDC dc, W* p, int hover)
 
     case WK_CARD: {
         Card(dc, p->r, p->active ? C_RAISED : C_PANEL, p->active ? Acc() : C_BORDER, 12);
+        if (p->icon)
+            Icon(dc, p->icon, (p->r.left + p->r.right) / 2,
+                 (p->r.top + p->r.bottom) / 2 - 12, 10, C_TXT2);
         RECT lab; SetRect(&lab, p->r.left, p->r.bottom - 40, p->r.right, p->r.bottom - 22);
         Txt(dc, lab, p->text, C_TXT, g_fs, DT_CENTER | DT_VCENTER);
         if (p->sub[0]) {
@@ -941,31 +961,14 @@ static void PaintShell(HWND h, HDC target)
         PaintPreviewCard(dc);
         RECT strip; SetRect(&strip, PVX, PVY + PVH + 22, PVX + PVW, WINH - PAD);
         Card(dc, strip, C_PANEL, C_BORDER, 16);
-        TxtAt(dc, PVX + 20, PVY + PVH + 34, 300, 20, L"PRESET LIBRARY", C_TXT, g_fs, DT_LEFT | DT_VCENTER);
-        TxtAt(dc, PVX + 20, PVY + PVH + 52, 360, 16, L"Quick select or build your own", C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
-        for (int i = 0; i < g_nw; i++)
-            if (g_w[i].kind == WK_CARD && g_w[i].id >= ID_PRESET && g_w[i].id < ID_PRESET + 16) {
-                Crosshair t; memcpy(&t, &g_ch, sizeof(t));
-                ChDefault(&t, g_w[i].id - ID_PRESET);
-                t.color = g_ch.color; t.glow = g_ch.glow;
-                PaintThumb(dc, g_w[i].r, &t, 14);
-            }
+        Icon(dc, IC_PRESETS, PVX + 28, PVY + PVH + 44, 8, Acc());
+        TxtAt(dc, PVX + 44, PVY + PVH + 34, 300, 20, L"PRESET LIBRARY", C_TXT, g_fs, DT_LEFT | DT_VCENTER);
+        TxtAt(dc, PVX + 44, PVY + PVH + 52, 360, 16, L"Quick select or build your own", C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
     } else if (g_screen == SC_STUDIO) {
         RECT box; SetRect(&box, PVX, PVY, PVX + PVW, WINH - PAD);
         PaintPixelCanvas(dc, box);
     } else if (g_screen == SC_PRESETS) {
         TxtAt(dc, PVX, PVY, 400, 24, L"PRESETS & LIBRARY", C_TXT, g_fh, DT_LEFT | DT_VCENTER);
-        for (int i = 0; i < g_nw; i++) {
-            if (g_w[i].kind != WK_CARD) continue;
-            if (g_w[i].id >= ID_PRESET && g_w[i].id < ID_PRESET + 16) {
-                Crosshair t; memcpy(&t, &g_ch, sizeof(t));
-                ChDefault(&t, g_w[i].id - ID_PRESET);
-                t.color = g_ch.color; t.glow = g_ch.glow;
-                PaintThumb(dc, g_w[i].r, &t, 16);
-            } else if (g_w[i].id >= ID_LIB && g_w[i].id < ID_LIB + MAXLIB) {
-                PaintThumb(dc, g_w[i].r, &g_lib[g_w[i].id - ID_LIB], 16);
-            }
-        }
     } else if (g_screen == SC_PROFILES) {
         TxtAt(dc, PVX, PVY, 500, 24, L"GAME PROFILES", C_TXT, g_fh, DT_LEFT | DT_VCENTER);
         TxtAt(dc, PVX, PVY + 24, 700, 18,
@@ -976,17 +979,31 @@ static void PaintShell(HWND h, HDC target)
                   C_TXT2, g_f, DT_LEFT | DT_VCENTER);
     } else if (g_screen == SC_THEMES) {
         TxtAt(dc, PVX, PVY, 400, 24, L"ACCENT", C_TXT, g_fh, DT_LEFT | DT_VCENTER);
-        for (int i = 0; i < g_nw; i++)
-            if (g_w[i].kind == WK_CARD && g_w[i].id >= ID_ACCENT && g_w[i].id < ID_ACCENT + 6) {
-                RECT sw = g_w[i].r;
-                SetRect(&sw, sw.left + 30, sw.top + 22, sw.right - 30, sw.top + 62);
-                Card(dc, sw, ToRef(g_w[i].col), ToRef(g_w[i].col), 10);
-            }
     } else {
         TxtAt(dc, PVX, PVY, 400, 24, L"SETTINGS", C_TXT, g_fh, DT_LEFT | DT_VCENTER);
     }
 
     for (int i = 0; i < g_nw; i++) PaintWidget(dc, &g_w[i], i == g_hover);
+
+    // card contents sit on top of the card, so they are painted after it
+    for (int i = 0; i < g_nw; i++) {
+        W* p = &g_w[i];
+        if (p->kind != WK_CARD) continue;
+        if (p->id >= ID_PRESET && p->id < ID_PRESET + 16) {
+            Crosshair t; memcpy(&t, &g_ch, sizeof(t));
+            ChDefault(&t, p->id - ID_PRESET);
+            t.color = g_ch.color; t.glow = 0; t.opacity = 255;
+            PaintThumb(dc, p->r, &t, 16);
+        } else if (p->id >= ID_LIB && p->id < ID_LIB + MAXLIB) {
+            Crosshair t; memcpy(&t, &g_lib[p->id - ID_LIB], sizeof(t));
+            t.glow = 0; t.opacity = 255;
+            PaintThumb(dc, p->r, &t, 16);
+        } else if (p->id >= ID_ACCENT && p->id < ID_ACCENT + 6) {
+            RECT sw = p->r;
+            SetRect(&sw, sw.left + 30, sw.top + 20, sw.right - 30, sw.top + 58);
+            Card(dc, sw, ToRef(p->col), ToRef(p->col), 10);
+        }
+    }
 
     ModifyWorldTransform(dc, NULL, MWT_IDENTITY);
     SetGraphicsMode(dc, GM_COMPATIBLE);
@@ -1114,9 +1131,22 @@ static void Command(int id)
     if (id >= ID_NAV && id < ID_NAV + 6) { g_screen = id - ID_NAV; g_hover = -1; ShellRedraw(); return; }
     if (id >= ID_TAB && id < ID_TAB + 4) { g_tab = id - ID_TAB; g_hover = -1; ShellRedraw(); return; }
     if (id >= ID_STYLE && id < ID_STYLE + 5) {
-        g_ch.style = id - ID_STYLE;
-        wcsncpy(g_ch.name, kStyleName[id - ID_STYLE], 31);
-        ApplyAndSave(); return;
+        int st = id - ID_STYLE;
+        g_ch.style = st;
+        wcsncpy(g_ch.name, kStyleName[st], 31);
+        g_ch.name[31] = 0;
+        if (g_ch.thickness < 1) g_ch.thickness = 1;
+        if (g_ch.opacity < 10)  g_ch.opacity = 255;
+        if (st == ST_DOT) {
+            g_ch.centerDot = 1;
+            if (g_ch.dotSize < 3) g_ch.dotSize = 3;
+        } else if (g_ch.length < 3) {
+            g_ch.length = (st == ST_CIRCLE) ? 6 : 8;
+        }
+        if (st == ST_CIRCLE && g_ch.gap + g_ch.length < 3) g_ch.gap = 4;
+        ApplyAndSave();
+        ShellStatus(kStyleName[st]);
+        return;
     }
     if (id >= ID_SWATCH && id < ID_SWATCH + 8) { SetColor(kPalette[id - ID_SWATCH]); return; }
     if (id >= ID_TOOL && id < ID_TOOL + 8) {
@@ -1205,9 +1235,19 @@ static void Command(int id)
     case ID_CENTERDOT:  g_ch.centerDot = !g_ch.centerDot; ApplyAndSave(); break;
     case ID_OUTLINE:    g_ch.outline = !g_ch.outline; ApplyAndSave(); break;
     case ID_IMGLOAD:    PickImage(); break;
-    case ID_IMGCLEAR:   g_ch.image[0] = 0; ChDropImage();
-                        if (g_ch.style == ST_IMAGE) g_ch.style = ST_CROSS;
-                        ApplyAndSave(); break;
+    case ID_IMGCLEAR:
+        g_ch.image[0] = 0;
+        g_ch.imageScale = 100;
+        ChDropImage();
+        if (g_ch.style == ST_IMAGE) {
+            g_ch.style = ST_CROSS;
+            if (g_ch.length < 3)    g_ch.length = 8;
+            if (g_ch.thickness < 1) g_ch.thickness = 2;
+            wcscpy(g_ch.name, L"Cross");
+        }
+        ApplyAndSave();
+        ShellStatus(L"Image removed");
+        break;
     case ID_IMGUSE:     if (g_ch.image[0]) { g_ch.style = ST_IMAGE; ApplyAndSave(); }
                         else ShellStatus(L"Upload an image first");
                         break;
