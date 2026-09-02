@@ -85,3 +85,45 @@ test.describe("mega menu navigation", () => {
     await expect(page).toHaveURL(/\/resources\/cyber-resilience-readiness-checklist$/);
   });
 });
+
+test.describe("reveal animations after client-side navigation", () => {
+  test("content becomes visible without a refresh", async ({ page }) => {
+    await page.goto("/");
+    // Navigate client-side (no full reload) to a page with reveal sections.
+    await page.locator('footer a[href="/industries/healthcare"]').click();
+    await page.waitForURL(/\/industries\/healthcare$/);
+    const revealed = page.locator("[data-reveal]");
+    const count = await revealed.count();
+    expect(count).toBeGreaterThan(0);
+    // Scroll through the page; every reveal element must end up visible.
+    // Scroll like a user (wheel) through the whole page.
+    const height = await page.evaluate(() => document.body.scrollHeight);
+    for (let y = 0; y <= height; y += 500) {
+      await page.mouse.wheel(0, 500);
+      await page.waitForTimeout(60);
+    }
+    await page.waitForTimeout(400);
+    for (let i = 0; i < count; i++) {
+      const el = revealed.nth(i);
+      await expect(el).toHaveClass(/is-visible/);
+      expect(await el.evaluate((n) => Number(getComputedStyle(n).opacity))).toBeGreaterThan(0.9);
+    }
+  });
+});
+
+test("reveal survives instant programmatic scroll (anchor jumps)", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('footer a[href="/services/managed-it"]').click();
+  await page.waitForURL(/\/services\/managed-it$/);
+  await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" as ScrollBehavior }));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.scrollTo({ top: 900, behavior: "instant" as ScrollBehavior }));
+  await page.waitForTimeout(400);
+  const hiddenInView = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)")].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.bottom > 0 && r.top < window.innerHeight;
+    }).length,
+  );
+  expect(hiddenInView).toBe(0);
+});
