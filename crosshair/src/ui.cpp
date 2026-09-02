@@ -75,7 +75,7 @@ enum {
     ID_PROF = 350, ID_PROFAUTO = 380, ID_PROFDEL = 400, ID_PROFADD = 420,
     ID_SET = 450, ID_UPDCHECK = 460, ID_UPDINSTALL,
     ID_ENV = 470, ID_ZOOM = 480, ID_ACCENT = 490,
-    ID_GLASS = 520, ID_SHADOW, ID_GRADIENT, ID_GRADCOL, ID_GOSTUDIO,
+    ID_WINALPHA = 520, ID_SHADOW, ID_GRADIENT, ID_GRADCOL, ID_GOSTUDIO,
     ID_MIN = 500, ID_HIDE, ID_CLOSE, ID_TOGGLEOVL, ID_PROFCHIP, ID_HOTKEYCHIP
 };
 enum { T_PEN, T_ERASE, T_FILL, T_LINE, T_RECT, T_CIRC, T_MIRX, T_MIRY };
@@ -126,9 +126,7 @@ static HDC       g_bdc  = NULL;
 static HBITMAP   g_dib  = NULL;
 static HGDIOBJ   g_bold = NULL;
 static uint32_t* g_buf  = NULL;
-static uint8_t*  g_mask = NULL;
 static int       g_bw = 0, g_bh = 0;
-static BOOL      g_layered = FALSE;
 
 static int Clamp(int v, int a, int b) { return v < a ? a : (v > b ? b : v); }
 
@@ -136,7 +134,6 @@ static void BufferFree(void)
 {
     if (g_bdc) { SelectObject(g_bdc, g_bold); DeleteDC(g_bdc); g_bdc = NULL; }
     if (g_dib) { DeleteObject(g_dib); g_dib = NULL; }
-    if (g_mask) { free(g_mask); g_mask = NULL; }
     g_buf = NULL; g_bw = g_bh = 0;
 }
 
@@ -161,113 +158,39 @@ static BOOL BufferEnsure(int w, int h)
     if (!g_dib || !g_bdc) { BufferFree(); return FALSE; }
     g_bold = SelectObject(g_bdc, g_dib);
     g_buf = (uint32_t*)bits;
-    g_mask = (uint8_t*)malloc((size_t)w * h);
-    if (!g_mask) { BufferFree(); return FALSE; }
     g_bw = w; g_bh = h;
     return TRUE;
 }
 
-static void MaskFill(int a)
-{
-    if (g_mask) memset(g_mask, (unsigned char)a, (size_t)g_bw * g_bh);
-}
-
-// stamps a rounded rectangle (given in LOGICAL coords) into the alpha mask
-static void MaskRound(RECT lr, int a, int rad)
-{
-    if (!g_mask) return;
-    int l = (int)(lr.left * g_ds), t = (int)(lr.top * g_ds);
-    int r = (int)(lr.right * g_ds), b = (int)(lr.bottom * g_ds);
-    int rr = (int)(rad * g_ds);
-    if (l < 0) l = 0;
-    if (t < 0) t = 0;
-    if (r > g_bw) r = g_bw;
-    if (b > g_bh) b = g_bh;
-    for (int y = t; y < b; y++) {
-        int inset = 0;
-        int dy = (y < t + rr) ? (t + rr - y) : (y >= b - rr ? y - (b - rr) + 1 : 0);
-        if (dy > 0 && rr > 0) {
-            int v = rr * rr - dy * dy;
-            int q = 0;
-            while ((q + 1) * (q + 1) <= v) q++;
-            inset = rr - q;
-        }
-        uint8_t* row = g_mask + (size_t)y * g_bw;
-        for (int x = l + inset; x < r - inset; x++) row[x] = (uint8_t)a;
-    }
-}
-
-// zero the mask outside the window's rounded outline
-static void MaskClipRound(int rad)
-{
-    if (!g_mask) return;
-    int rr = (int)(rad * g_ds);
-    for (int y = 0; y < g_bh; y++) {
-        int dy = (y < rr) ? (rr - y) : (y >= g_bh - rr ? y - (g_bh - rr) + 1 : 0);
-        int inset = 0;
-        if (dy > 0 && rr > 0) {
-            int v = rr * rr - dy * dy, q = 0;
-            while ((q + 1) * (q + 1) <= v) q++;
-            inset = rr - q;
-        }
-        uint8_t* row = g_mask + (size_t)y * g_bw;
-        for (int x = 0; x < inset && x < g_bw; x++) row[x] = 0;
-        for (int x = g_bw - inset; x < g_bw; x++) if (x >= 0) row[x] = 0;
-    }
-}
-
-// Win10/11 blur behind the window, and rounded corners on Win11
+// Rounded corners, dark mode and (on Win11 22H2+) an acrylic backdrop.
+// All documented DwmSetWindowAttribute calls - they no-op on older Windows.
 static void EnableBackdrop(HWND h)
 {
-    typedef enum { ACCENT_DISABLED = 0, ACCENT_ENABLE_BLURBEHIND = 3,
-                   ACCENT_ENABLE_ACRYLICBLURBEHIND = 4 } ACCENT_STATE;
-    struct ACCENTPOLICY { int state; int flags; unsigned gradient; int animid; };
-    struct WCA { int attrib; void* data; size_t size; };
-    typedef BOOL (WINAPI *PFN_SWCA)(HWND, struct WCA*);
-
-    HMODULE u = GetModuleHandleW(L"user32.dll");
-    PFN_SWCA swca = u ? (PFN_SWCA)(void*)GetProcAddress(u, "SetWindowCompositionAttribute") : NULL;
-    if (swca) {
-        struct ACCENTPOLICY ap;
-        ap.state = ACCENT_ENABLE_ACRYLICBLURBEHIND;
-        ap.flags = 2;                       // apply the tint to the whole client
-        ap.gradient = 0x8C100800;           // AABBGGRR - #000810 at 0.55
-        ap.animid = 0;
-        struct WCA wca; wca.attrib = 19; wca.data = &ap; wca.size = sizeof(ap);
-        if (!swca(h, &wca)) {
-            ap.state = ACCENT_ENABLE_BLURBEHIND;
-            swca(h, &wca);
-        }
-    }
-    DWORD round = 2;                        // DWMWCP_ROUND
+    DWORD round = 2;                                   // DWMWCP_ROUND
     DwmSetWindowAttribute(h, 33, &round, sizeof(round));
     BOOL dark = TRUE;
     DwmSetWindowAttribute(h, 20, &dark, sizeof(dark));
+    DWORD backdrop = 3;                                // DWMSBT_TRANSIENTWINDOW
+    DwmSetWindowAttribute(h, 38, &backdrop, sizeof(backdrop));
+}
+
+// The transparency itself: a plain layered-window alpha, which every version
+// of Windows supports and which leaves normal GDI painting alone.
+static void ApplyWindowAlpha(void)
+{
+    if (!g_hwnd) return;
+    int pct = Clamp(g_set.winAlpha, 40, 100);
+    LONG_PTR ex = GetWindowLongPtrW(g_hwnd, GWL_EXSTYLE);
+    if (!(ex & WS_EX_LAYERED))
+        SetWindowLongPtrW(g_hwnd, GWL_EXSTYLE, ex | WS_EX_LAYERED);
+    SetLayeredWindowAttributes(g_hwnd, 0, (BYTE)(pct * 255 / 100), LWA_ALPHA);
 }
 
 static void Present(HWND h, HDC target)
 {
-    if (!g_buf) return;
-    if (g_layered && g_set.glass) {
-        for (int i = 0; i < g_bw * g_bh; i++) {
-            int a = g_mask[i];
-            uint32_t c = g_buf[i];
-            if (!a) { g_buf[i] = 0; continue; }
-            g_buf[i] = ((uint32_t)a << 24) |
-                       ((uint32_t)((((c >> 16) & 0xFF) * a) / 255) << 16) |
-                       ((uint32_t)((((c >>  8) & 0xFF) * a) / 255) << 8) |
-                        (uint32_t)(((  c        & 0xFF) * a) / 255);
-        }
-        SIZE sz = { g_bw, g_bh };
-        POINT src = { 0, 0 };
-        BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
-        HDC screen = GetDC(NULL);
-        BOOL ok = UpdateLayeredWindow(h, screen, NULL, &sz, g_bdc, &src, 0, &bf, ULW_ALPHA);
-        ReleaseDC(NULL, screen);
-        if (ok) return;
-        g_set.glass = 0;                    // fall back to an opaque window
-    }
-    if (target) BitBlt(target, 0, 0, g_bw, g_bh, g_bdc, 0, 0, SRCCOPY);
+    (void)h;
+    if (!g_buf || !target) return;
+    BitBlt(target, 0, 0, g_bw, g_bh, g_bdc, 0, 0, SRCCOPY);
 }
 static COLORREF ToRef(uint32_t c) { return RGB((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF); }
 
@@ -746,6 +669,8 @@ static void LayoutProfiles(void)
 static void LayoutThemes(void)
 {
     int y = PVY + 46;
+    Slider(ID_WINALPHA, PVX, WINH - 130, 420, L"WINDOW TRANSPARENCY",
+           &g_set.winAlpha, 40, 100, L"%", IC_DROP);
     for (int i = 0; i < 6; i++) {
         W* p = Add(ID_ACCENT + i, WK_CARD, PVX + i * 152, y, 140, 120, kAccentName[i]);
         p->col = 0xFF000000 | ((uint32_t)GetRValue(kAccents[i]) << 16) |
@@ -767,7 +692,13 @@ static void LayoutSettings(void)
     y += 14;
     Head(x, &y, w, L"SYSTEM", IC_GEAR);
     Toggle(ID_SET + 4, x, &y, w, L"Start with Windows", &g_set.startWithWindows, IC_POWER);
-    Toggle(ID_GLASS,   x, &y, w, L"Translucent glass window", &g_set.glass, IC_EYE);
+    y += 8;
+    Head(x, &y, w, L"APPEARANCE", IC_EYE);
+    Slider(ID_WINALPHA, x, y, w, L"WINDOW TRANSPARENCY", &g_set.winAlpha, 40, 100, L"%", IC_DROP);
+    y += 44;
+    Add(0, WK_TEXT, x, y, w, 18,
+        L"Drag left to see more of your desktop through the app.");
+    y += 26;
     Toggle(ID_SET + 5, x, &y, w, L"Check for updates automatically", &g_set.autoUpdate, IC_REFRESH);
     y += 10;
     Ic(Add(ID_UPDCHECK, WK_BTN, x, y, 210, 38, L"CHECK FOR UPDATES"), IC_REFRESH)->variant = V_GHOST;
@@ -1315,26 +1246,6 @@ static void PaintShell(HWND h, HDC target)
     ModifyWorldTransform(dc, NULL, MWT_IDENTITY);
     SetGraphicsMode(dc, GM_COMPATIBLE);
 
-    // ---- alpha mask: window is glass, panels are readable, widgets are solid
-    MaskFill(0);
-    MaskRound(full, DC_A_WINDOW, DC_R_WINDOW);
-    MaskRound(RSide(), DC_A_PANEL, DC_R_WINDOW);
-    MaskRound(RStatus(), DC_A_PANEL + 26, DC_R_PANEL);
-    if (g_screen == SC_HOME || g_screen == SC_STUDIO) {
-        MaskRound(RRight(), DC_A_PANEL, DC_R_PANEL);
-        MaskRound(g_screen == SC_HOME ? RPrev() : RC(PVX, PVY, PVX + PVW, WINH - PAD),
-                  DC_A_PANEL, DC_R_PANEL);
-        if (g_screen == SC_HOME) MaskRound(RStrip(), DC_A_PANEL, DC_R_PANEL);
-    } else {
-        MaskRound(RContent(), DC_A_PANEL, DC_R_PANEL);
-    }
-    for (int i = 0; i < g_nw; i++) {
-        int k = g_w[i].kind;
-        if (k == WK_BTN || k == WK_CARD || k == WK_ROW || k == WK_CHIP || k == WK_SWATCH)
-            MaskRound(g_w[i].r, DC_A_SOLID, DC_R_BTN);
-    }
-    MaskClipRound(DC_R_WINDOW);
-
     Present(h, target);
 }
 
@@ -1451,24 +1362,6 @@ static void LibSave(void)
     g_libUsed[slot] = 1;
     ShellStatus(L"Saved to library");
     CfgSave();
-}
-
-// switch the window between layered glass and an opaque surface at runtime
-static void ApplyGlass(void)
-{
-    if (!g_hwnd) return;
-    LONG_PTR ex = GetWindowLongPtrW(g_hwnd, GWL_EXSTYLE);
-    if (g_set.glass) {
-        SetWindowLongPtrW(g_hwnd, GWL_EXSTYLE, ex | WS_EX_LAYERED);
-        g_layered = TRUE;
-        EnableBackdrop(g_hwnd);
-    } else {
-        SetWindowLongPtrW(g_hwnd, GWL_EXSTYLE, ex & ~WS_EX_LAYERED);
-        g_layered = FALSE;
-    }
-    SetWindowPos(g_hwnd, NULL, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    InvalidateRect(g_hwnd, NULL, TRUE);
 }
 
 // ------------------------------------------------------------------ commands
@@ -1602,7 +1495,7 @@ static void Command(int id)
     case ID_GRADCOL:    PickColor(2); break;
     case ID_GRADIENT:   g_ch.gradient = !g_ch.gradient; ApplyAndSave(); break;
     case ID_GOSTUDIO:   g_screen = SC_STUDIO; ShellRedraw(); break;
-    case ID_GLASS:      g_set.glass = !g_set.glass; CfgSave(); ApplyGlass(); ShellRedraw(); break;
+
     case ID_CENTERDOT:  g_ch.centerDot = !g_ch.centerDot; ApplyAndSave(); break;
     case ID_OUTLINE:    g_ch.outline = !g_ch.outline; ApplyAndSave(); break;
     case ID_IMGLOAD:    PickImage(); break;
@@ -1683,6 +1576,7 @@ static void SliderDrag(W* p, int x)
     int boxw = 62, w = (p->r.right - p->r.left) - boxw - 10;
     int rel = Clamp(x - p->r.left - 7, 0, w - 14);
     *p->val = p->mn + rel * (p->mx - p->mn) / (w - 14);
+    if (p->id == ID_WINALPHA) { ApplyWindowAlpha(); ShellRedraw(); return; }
     ShellApply();
 }
 
@@ -1870,13 +1764,13 @@ BOOL ShellCreate(void)
     g_xf.eM11 = g_ds; g_xf.eM12 = 0.0f; g_xf.eM21 = 0.0f;
     g_xf.eM22 = g_ds; g_xf.eDx = 0.0f;  g_xf.eDy = 0.0f;
 
-    DWORD ex = WS_EX_APPWINDOW | (g_set.glass ? WS_EX_LAYERED : 0);
-    g_hwnd = CreateWindowExW(ex, APP_CLASS, APP_NAME,
+    g_hwnd = CreateWindowExW(WS_EX_APPWINDOW | WS_EX_LAYERED, APP_CLASS, APP_NAME,
         WS_POPUP | WS_MINIMIZEBOX, (sw - pw) / 2, (sh - ph) / 2, pw, ph,
         NULL, NULL, g_inst, NULL);
     if (!g_hwnd) return FALSE;
-    g_layered = g_set.glass ? TRUE : FALSE;
-    if (g_set.glass) EnableBackdrop(g_hwnd);
+    SetWindowRgn(g_hwnd, CreateRoundRectRgn(0, 0, pw + 1, ph + 1, 16, 16), TRUE);
+    EnableBackdrop(g_hwnd);
+    ApplyWindowAlpha();
 
     const wchar_t* face = PickFace();
     // grayscale AA, not ClearType: subpixel text on a translucent surface fringes

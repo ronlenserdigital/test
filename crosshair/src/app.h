@@ -7,8 +7,8 @@
 
 #define APP_NAME    L"DEADCENTER"
 #define APP_ID      L"DeadCenter"
-#define APP_VER     L"1.3.0"
-#define APP_VERNUM  10300
+#define APP_VER     L"1.3.1"
+#define APP_VERNUM  10301
 #define APP_CLASS   L"DeadCenterShell"
 #define OV_CLASS    L"DeadCenterOverlay"
 #define MSG_CLASS   L"DeadCenterMsg"
@@ -56,7 +56,7 @@ struct Profile {
 struct Settings {
     int overlayOn, onlyInGame, autoDetect, autoOpenPanel, startWithWindows;
     int accent;            // theme accent index
-    int glass;             // translucent acrylic window
+    int winAlpha;          // window opacity, 40..100 percent
     int previewEnv;        // 0 dark 1 arena 2 grass 3 sky 4 custom image
     wchar_t previewImage[MAX_PATH];
     int autoUpdate;

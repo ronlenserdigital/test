@@ -15,18 +15,15 @@ for gradient stops, and a navy stack of `#000810` / `#011921` / `#05232D` for
 the surfaces. Cyan is reserved for state - active nav, selected preset, the
 primary CTA, live status dots, the mark itself - never for plain text.
 
-### The glass window
+### The transparent window
 
-The window is genuinely translucent, not a dark rectangle. The shell renders
-into a 32-bit DIB alongside an 8-bit alpha mask (window 0.55, panels 0.73,
-controls solid), presents it with `UpdateLayeredWindow`, and asks DWM for an
-acrylic backdrop behind it via `SetWindowCompositionAttribute`, plus rounded
-corners and dark mode through `DwmSetWindowAttribute`. The desktop shows
-through, blurred, while the panels stay readable. Dragging, minimising, the
-tray, the hotkey and the overlay are untouched by it, and **Settings ->
-Translucent glass window** drops the window back to opaque if a machine does
-not cooperate. The app also falls back automatically if the layered present
-ever fails.
+Transparency is a **slider**, not a switch — Settings → Appearance, and again on
+the Themes screen. It drives `SetLayeredWindowAttributes` with `LWA_ALPHA`,
+which every version of Windows supports and which leaves ordinary GDI painting
+alone, so dragging it is live and cannot fail into an invisible window. Rounded
+corners, dark mode and (on Windows 11 22H2+) an acrylic backdrop come from
+documented `DwmSetWindowAttribute` calls that simply no-op on older builds.
+Dragging, minimising, the tray, the hotkey and the overlay are unaffected.
 
 The mark itself is drawn as vector art (`BrandMark` in `src/icons.cpp`) so it
 scales to the sidebar, the title bar, the tray and the alt-tab icon without
