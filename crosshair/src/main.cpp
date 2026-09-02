@@ -73,10 +73,7 @@ static void Scan(void)
         if (game) wcsncpy(g_lastGame, exe, 63);
     }
 
-    if (game) {
-        OverlaySetMonitorFrom(fg);
-        CapPoll(fg);                       // keep a fresh frame for the editor backdrop
-    }
+    if (game) OverlaySetMonitorFrom(fg);
 
     // auto-switch to the profile that owns this game
     if (game && prof >= 0 && g_prof[prof].autoLaunch && prof != g_activeProfile) {

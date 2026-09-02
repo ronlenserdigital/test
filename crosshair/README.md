@@ -18,11 +18,13 @@ Pure Win32 + GDI, statically linked, no framework.
 
 ## What it does
 
-**Home** — a large live preview with your real game behind it. While a game has
-focus DEADCENTER grabs a downscaled frame of that monitor, so when you alt-tab
-back you are tuning the crosshair against the actual scene, not a gradient.
-Falls back to Dark / Arena / Grass / Sky if a frame is not available
-(exclusive-fullscreen and protected surfaces capture black).
+**Home** — a large preview showing the crosshair and nothing else, at 100% /
+200% / 400%, on a flat neutral field. Every control on the right applies to the
+live overlay as you move it.
+
+Every tab, nav item, toggle, slider and button carries a vector icon drawn by
+the app itself — no icon font, no image assets, nothing added to the binary
+beyond the geometry.
 
 **Design** — three modes so the complexity is opt-in:
 - **Basic**: colour, opacity, thickness, outline, length, centre dot, gap,
@@ -35,8 +37,7 @@ Falls back to Dark / Arena / Grass / Sky if a frame is not available
 **Studio** is the pixel editor — 16–48px canvas with pen, eraser, flood fill,
 line, rect, ellipse, X/Y mirror and undo — one layer deep, where it belongs.
 
-Preview zoom runs 100% / 200% / 400%. Eight presets sit under the canvas, and
-**Themes** swaps the app accent.
+Eight presets sit under the canvas, and **Themes** swaps the app accent.
 
 **Game Profiles** — every game remembers its own crosshair and resolution, and
 DEADCENTER switches automatically the moment that game takes focus.

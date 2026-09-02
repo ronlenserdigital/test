@@ -99,8 +99,8 @@ void CfgSave(void)
     fwprintf(f, L"overlayOn %d\nonlyInGame %d\nautoDetect %d\nautoOpen %d\nstartWin %d\n",
              g_set.overlayOn, g_set.onlyInGame, g_set.autoDetect,
              g_set.autoOpenPanel, g_set.startWithWindows);
-    fwprintf(f, L"autoUpdate %d\npreviewEnv %d\npreviewZoom %d\naccent %d\n",
-             g_set.autoUpdate, g_set.previewEnv, g_set.previewZoom, g_set.accent);
+    fwprintf(f, L"autoUpdate %d\npreviewZoom %d\naccent %d\n",
+             g_set.autoUpdate, g_set.previewZoom, g_set.accent);
 
     fwprintf(f, L"[crosshair]\n");
     WriteCh(f, &g_ch);
@@ -125,7 +125,7 @@ void CfgLoad(void)
 {
     ZeroMemory(&g_set, sizeof(g_set));
     g_set.overlayOn = 1; g_set.onlyInGame = 1; g_set.autoDetect = 1;
-    g_set.autoUpdate = 1; g_set.previewEnv = 0; g_set.previewZoom = 2;
+    g_set.autoUpdate = 1; g_set.previewZoom = 2;
     ZeroMemory(g_libUsed, sizeof(g_libUsed));
     g_nprof = 0;
     ChDefault(&g_ch, 0);
@@ -187,7 +187,6 @@ void CfgLoad(void)
             else if (!wcscmp(key, L"autoOpen"))   g_set.autoOpenPanel = !!v;
             else if (!wcscmp(key, L"startWin"))   g_set.startWithWindows = !!v;
             else if (!wcscmp(key, L"autoUpdate")) g_set.autoUpdate = !!v;
-            else if (!wcscmp(key, L"previewEnv")) g_set.previewEnv = Clamp(v, 0, 4);
             else if (!wcscmp(key, L"accent"))     g_set.accent = Clamp(v, 0, 5);
             else if (!wcscmp(key, L"previewZoom")) g_set.previewZoom = Clamp(v, 1, 8);
         }

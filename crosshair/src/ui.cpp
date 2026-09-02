@@ -1,4 +1,5 @@
 #include "app.h"
+#include "icons.h"
 #include <commdlg.h>
 #include <windowsx.h>
 #include <stdio.h>
@@ -60,14 +61,13 @@ enum {
     ID_PRESET = 300, ID_LIB = 320, ID_LIBSAVE = 340, ID_APPLY,
     ID_PROF = 350, ID_PROFAUTO = 380, ID_PROFDEL = 400, ID_PROFADD = 420,
     ID_SET = 450, ID_UPDCHECK = 460, ID_UPDINSTALL,
-    ID_ENV = 470, ID_ZOOM = 480, ID_ACCENT = 490,
+    ID_ZOOM = 480, ID_ACCENT = 490,
     ID_MIN = 500, ID_HIDE, ID_CLOSE, ID_TOGGLEOVL, ID_PROFCHIP, ID_HOTKEYCHIP
 };
 enum { T_PEN, T_ERASE, T_FILL, T_LINE, T_RECT, T_CIRC, T_MIRX, T_MIRY };
 
 static const wchar_t* kStyleName[5] = { L"Cross", L"Dot", L"T-Shape", L"Circle", L"Chevron" };
 static const wchar_t* kToolName[8]  = { L"Pen", L"Erase", L"Fill", L"Line", L"Rect", L"Ring", L"Mir X", L"Mir Y" };
-static const wchar_t* kEnvName[5]   = { L"Game", L"Dark", L"Arena", L"Grass", L"Sky" };
 static const wchar_t* kPresetSub[8] = { L"Default", L"Minimal", L"Clean", L"Balanced",
                                         L"Framed", L"Dynamic", L"Aggressive", L"Long range" };
 
@@ -77,7 +77,7 @@ static const uint32_t kPalette[8] = {
 };
 
 struct W {
-    int      id, kind, variant, active;
+    int      id, kind, variant, active, icon;
     RECT     r;
     wchar_t  text[72], sub[72];
     int*     val;
@@ -161,24 +161,27 @@ static W* Add(int id, int kind, int x, int y, int w, int h, const wchar_t* t)
     return p;
 }
 
-static void Head(int x, int* y, int w, const wchar_t* t)
+static W* Ic(W* p, int icon) { p->icon = icon; return p; }
+
+static void Head(int x, int* y, int w, const wchar_t* t, int icon)
 {
-    Add(0, WK_HEAD, x, *y, w, 15, t);
+    Add(0, WK_HEAD, x, *y, w, 15, t)->icon = icon;
     *y += 24;
 }
 
-static W* Slider(int id, int x, int y, int w, const wchar_t* t, int* v, int mn, int mx, const wchar_t* unit)
+static W* Slider(int id, int x, int y, int w, const wchar_t* t, int* v, int mn, int mx,
+                 const wchar_t* unit, int icon)
 {
     W* p = Add(id, WK_SLIDER, x, y, w, 46, t);
-    p->val = v; p->mn = mn; p->mx = mx;
+    p->val = v; p->mn = mn; p->mx = mx; p->icon = icon;
     if (unit) { wcsncpy(p->sub, unit, 71); p->sub[71] = 0; }
     return p;
 }
 
-static W* Toggle(int id, int x, int* y, int w, const wchar_t* t, int* v)
+static W* Toggle(int id, int x, int* y, int w, const wchar_t* t, int* v, int icon)
 {
     W* p = Add(id, WK_TOGGLE, x, *y, w, 30, t);
-    p->val = v;
+    p->val = v; p->icon = icon;
     *y += 34;
     return p;
 }
@@ -235,50 +238,50 @@ static int PxCellFor(RECT r)
 
 static void LayoutChrome(void)
 {
-    Add(ID_MIN,   WK_BTN, WINW - 150, 26, 36, 36, L"\x2013")->variant = V_CHIP;
-    Add(ID_HIDE,  WK_BTN, WINW - 108, 26, 36, 36, L"\x25A2")->variant = V_CHIP;
-    Add(ID_CLOSE, WK_BTN, WINW -  66, 26, 36, 36, L"\x00D7")->variant = V_CHIP;
+    Ic(Add(ID_MIN,   WK_BTN, WINW - 150, 26, 36, 36, L""), IC_MIN)->variant = V_CHIP;
+    Ic(Add(ID_HIDE,  WK_BTN, WINW - 108, 26, 36, 36, L""), IC_MAX)->variant = V_CHIP;
+    Ic(Add(ID_CLOSE, WK_BTN, WINW -  66, 26, 36, 36, L""), IC_CLOSE)->variant = V_CHIP;
 
     W* p = Add(ID_PROFCHIP, WK_CHIP, PVX, 18, 220, 52, L"Current Profile");
     wcsncpy(p->sub, g_activeLabel, 71); p->sub[71] = 0;
-    p->active = 1;
+    p->icon = IC_SHIELD;
 
     int rw = 0, rh = 0; OverlayResolution(&rw, &rh);
     wchar_t res[40]; _snwprintf(res, 40, L"%d \x00D7 %d", rw, rh); res[39] = 0;
-    W* q = Add(0, WK_CHIP, PVX + 232, 18, 170, 52, L"Resolution");
+    W* q = Add(0, WK_CHIP, PVX + 232, 18, 190, 52, L"Resolution");
     wcsncpy(q->sub, res, 71); q->sub[71] = 0;
+    q->icon = IC_MONITOR;
 
-    W* k = Add(ID_HOTKEYCHIP, WK_CHIP, PVX + 414, 18, 180, 52, L"Overlay Hotkey");
+    W* k = Add(ID_HOTKEYCHIP, WK_CHIP, PVX + 434, 18, 190, 52, L"Overlay Hotkey");
     wcscpy(k->sub, L"F12");
+    k->icon = IC_KEY;
 
     static const wchar_t* nm[6] = { L"Home", L"Studio", L"Presets", L"Game Profiles", L"Themes", L"Settings" };
+    static const int nic[6] = { IC_HOME, IC_STUDIO, IC_PRESETS, IC_GAMEPAD, IC_THEME, IC_GEAR };
     int y = 110;
     for (int i = 0; i < 6; i++) {
         W* n = Add(ID_NAV + i, WK_NAV, 16, y, SIDEW - 32, 48, nm[i]);
         n->active = (g_screen == i);
+        n->icon = nic[i];
         y += 54;
     }
 
     // status card - the overlay switch and the in-game rule live here
     int cy = WINH - 306;
     int ty = cy + 144;
-    Toggle(ID_ONLYGAME, 36, &ty, SIDEW - 60, L"Only in game", &g_set.onlyInGame);
+    Toggle(ID_ONLYGAME, 36, &ty, SIDEW - 60, L"Only in game", &g_set.onlyInGame, IC_EYE);
     W* d = Add(ID_TOGGLEOVL, WK_BTN, 40, cy + 214, SIDEW - 80, 40,
-               g_set.overlayOn ? L"DISABLE OVERLAY" : L"ENABLE OVERLAY");
+               g_set.overlayOn ? L"DISABLE" : L"ENABLE");
     d->variant = g_set.overlayOn ? V_GHOST : V_ACCENT;
+    d->icon = IC_POWER;
 }
 
 static void LayoutPreviewCard(void)
 {
-    for (int i = 0; i < 5; i++) {
-        W* p = Add(ID_ENV + i, WK_BTN, PVX + PVW - 24 - (5 - i) * 84, PVY + 14, 78, 30, kEnvName[i]);
-        p->variant = V_CHIP;
-        p->active = (g_set.previewEnv == i);
-    }
     static const wchar_t* zn[3] = { L"100%", L"200%", L"400%" };
     static const int zv[3] = { 1, 2, 4 };
     for (int i = 0; i < 3; i++) {
-        W* p = Add(ID_ZOOM + i, WK_BTN, PVX + PVW - 24 - (3 - i) * 74, PVY + PVH - 42, 68, 28, zn[i]);
+        W* p = Add(ID_ZOOM + i, WK_BTN, PVX + PVW - 24 - (3 - i) * 78, PVY + 14, 72, 30, zn[i]);
         p->variant = V_CHIP;
         p->active = (g_set.previewZoom == zv[i]);
     }
@@ -286,71 +289,73 @@ static void LayoutPreviewCard(void)
 
 static void LayoutBasic(int y)
 {
-    Head(RPX, &y, RPW, L"COLOR");
+    Head(RPX, &y, RPW, L"COLOR", IC_PALETTE);
     for (int i = 0; i < 8; i++) {
         W* p = Add(ID_SWATCH + i, WK_SWATCH, RPX + i * 44, y, 38, 38, NULL);
         p->col = kPalette[i];
         p->active = ((g_ch.color & 0x00FFFFFF) == (kPalette[i] & 0x00FFFFFF));
     }
-    Add(ID_CUSTOMCOL, WK_BTN, RPX + 8 * 44, y, 38, 38, L"+")->variant = V_CHIP;
+    Ic(Add(ID_CUSTOMCOL, WK_BTN, RPX + 8 * 44, y, 38, 38, L""), IC_PLUS)->variant = V_CHIP;
     y += 56;
 
-    Slider(ID_OPACITY, RPX, y, RPW, L"OPACITY", &g_ch.opacity, 10, 255, L"");
+    Slider(ID_OPACITY, RPX, y, RPW, L"OPACITY", &g_ch.opacity, 10, 255, L"", IC_DROP);
     y += 58;
 
-    Slider(ID_THICK, RPX, y, HALF, L"THICKNESS", &g_ch.thickness, 1, 12, L"px");
-    Slider(ID_OUTW,  RPX + HALF + 20, y, HALF, L"OUTLINE", &g_ch.outline, 0, 1, L"");
+    Slider(ID_THICK, RPX, y, HALF, L"THICKNESS", &g_ch.thickness, 1, 12, L"px", IC_THICK);
+    Slider(ID_OUTW,  RPX + HALF + 20, y, HALF, L"OUTLINE", &g_ch.outline, 0, 1, L"", IC_OUTLINE);
     y += 58;
-    Slider(ID_LEN,     RPX, y, HALF, L"LENGTH", &g_ch.length, 0, 60, L"px");
-    Slider(ID_DOTSIZE, RPX + HALF + 20, y, HALF, L"CENTER DOT", &g_ch.dotSize, 1, 12, L"px");
+    Slider(ID_LEN,     RPX, y, HALF, L"LENGTH", &g_ch.length, 0, 60, L"px", IC_LENGTH);
+    Slider(ID_DOTSIZE, RPX + HALF + 20, y, HALF, L"CENTER DOT", &g_ch.dotSize, 1, 12, L"px", IC_DOT);
     y += 58;
-    Slider(ID_GAP,  RPX, y, HALF, L"GAP", &g_ch.gap, 0, 40, L"px");
-    Slider(ID_GLOW, RPX + HALF + 20, y, HALF, L"BLOOM / GLOW", &g_ch.glow, 0, 100, L"%");
+    Slider(ID_GAP,  RPX, y, HALF, L"GAP", &g_ch.gap, 0, 40, L"px", IC_GAP);
+    Slider(ID_GLOW, RPX + HALF + 20, y, HALF, L"BLOOM / GLOW", &g_ch.glow, 0, 100, L"%", IC_GLOW);
     y += 66;
 
-    Head(RPX, &y, RPW, L"OFFSET");
-    Slider(ID_OFFX, RPX, y, RPW - 130, L"X", &g_ch.offsetX, -60, 60, L"px");
+    Head(RPX, &y, RPW, L"OFFSET", IC_CROSSHAIR);
+    Slider(ID_OFFX, RPX, y, RPW - 130, L"HORIZONTAL", &g_ch.offsetX, -60, 60, L"px", IC_ARROWX);
     y += 56;
-    Slider(ID_OFFY, RPX, y, RPW - 130, L"Y", &g_ch.offsetY, -60, 60, L"px");
+    Slider(ID_OFFY, RPX, y, RPW - 130, L"VERTICAL", &g_ch.offsetY, -60, 60, L"px", IC_ARROWY);
 }
 
 static void LayoutShape(int y)
 {
-    Head(RPX, &y, RPW, L"STYLE");
+    static const int sic[5] = { IC_CROSSHAIR, IC_DOT, IC_SHAPE, IC_RING, IC_ARROWY };
+    Head(RPX, &y, RPW, L"STYLE", IC_SHAPE);
     for (int i = 0; i < 5; i++) {
         W* p = Add(ID_STYLE + i, WK_BTN, RPX + (i % 3) * 140, y + (i / 3) * 44, 132, 36, kStyleName[i]);
         p->variant = V_CHIP;
         p->active = (g_ch.style == i);
+        p->icon = sic[i];
     }
     y += 100;
-    Slider(ID_LEN,   RPX, y, HALF, L"LENGTH", &g_ch.length, 0, 60, L"px");
-    Slider(ID_THICK, RPX + HALF + 20, y, HALF, L"THICKNESS", &g_ch.thickness, 1, 12, L"px");
+    Slider(ID_LEN,   RPX, y, HALF, L"LENGTH", &g_ch.length, 0, 60, L"px", IC_LENGTH);
+    Slider(ID_THICK, RPX + HALF + 20, y, HALF, L"THICKNESS", &g_ch.thickness, 1, 12, L"px", IC_THICK);
     y += 58;
-    Slider(ID_GAP,     RPX, y, HALF, L"GAP", &g_ch.gap, 0, 40, L"px");
-    Slider(ID_DOTSIZE, RPX + HALF + 20, y, HALF, L"DOT SIZE", &g_ch.dotSize, 1, 12, L"px");
+    Slider(ID_GAP,     RPX, y, HALF, L"GAP", &g_ch.gap, 0, 40, L"px", IC_GAP);
+    Slider(ID_DOTSIZE, RPX + HALF + 20, y, HALF, L"DOT SIZE", &g_ch.dotSize, 1, 12, L"px", IC_DOT);
     y += 66;
-    Toggle(ID_CENTERDOT, RPX, &y, RPW, L"Center dot", &g_ch.centerDot);
-    Toggle(ID_OUTLINE,   RPX, &y, RPW, L"Outline",    &g_ch.outline);
+    Toggle(ID_CENTERDOT, RPX, &y, RPW, L"Center dot", &g_ch.centerDot, IC_DOT);
+    Toggle(ID_OUTLINE,   RPX, &y, RPW, L"Outline",    &g_ch.outline, IC_OUTLINE);
 }
 
 static void LayoutFx(int y)
 {
-    Head(RPX, &y, RPW, L"GLOW");
-    Slider(ID_GLOW, RPX, y, RPW, L"BLOOM / GLOW", &g_ch.glow, 0, 100, L"%");
+    Head(RPX, &y, RPW, L"GLOW", IC_SPARK);
+    Slider(ID_GLOW, RPX, y, RPW, L"BLOOM / GLOW", &g_ch.glow, 0, 100, L"%", IC_GLOW);
     y += 62;
-    Head(RPX, &y, RPW, L"OUTLINE");
-    Toggle(ID_OUTLINE, RPX, &y, RPW, L"Draw outline", &g_ch.outline);
-    Add(ID_OUTLINECOL, WK_BTN, RPX, y, RPW, 36, L"OUTLINE COLOR")->variant = V_GHOST;
+    Head(RPX, &y, RPW, L"OUTLINE", IC_OUTLINE);
+    Toggle(ID_OUTLINE, RPX, &y, RPW, L"Draw outline", &g_ch.outline, IC_OUTLINE);
+    Ic(Add(ID_OUTLINECOL, WK_BTN, RPX, y, RPW, 36, L"OUTLINE COLOR"), IC_PALETTE)->variant = V_GHOST;
     y += 52;
-    Head(RPX, &y, RPW, L"VISIBILITY");
-    Slider(ID_OPACITY, RPX, y, RPW, L"OPACITY", &g_ch.opacity, 10, 255, L"");
+    Head(RPX, &y, RPW, L"VISIBILITY", IC_EYE);
+    Slider(ID_OPACITY, RPX, y, RPW, L"OPACITY", &g_ch.opacity, 10, 255, L"", IC_DROP);
 }
 
 static void LayoutAdv(int y)
 {
-    Head(RPX, &y, RPW, L"CUSTOM IMAGE");
-    Add(ID_IMGLOAD,  WK_BTN, RPX, y, RPW - 110, 36, L"UPLOAD IMAGE")->variant = V_GHOST;
-    Add(ID_IMGCLEAR, WK_BTN, RPX + RPW - 100, y, 100, 36, L"REMOVE")->variant = V_GHOST;
+    Head(RPX, &y, RPW, L"CUSTOM IMAGE", IC_IMAGE);
+    Ic(Add(ID_IMGLOAD,  WK_BTN, RPX, y, RPW - 110, 36, L"UPLOAD IMAGE"), IC_UPLOAD)->variant = V_GHOST;
+    Ic(Add(ID_IMGCLEAR, WK_BTN, RPX + RPW - 100, y, 100, 36, L"REMOVE"), IC_TRASH)->variant = V_GHOST;
     y += 44;
     {
         const wchar_t* n = g_ch.image[0] ? wcsrchr(g_ch.image, L'\\') : NULL;
@@ -362,22 +367,26 @@ static void LayoutAdv(int y)
     }
     W* u = Add(ID_IMGUSE, WK_BTN, RPX, y, RPW, 36, L"USE IMAGE AS CROSSHAIR");
     u->variant = (g_ch.style == ST_IMAGE) ? V_ACCENT : V_GHOST;
+    u->icon = IC_IMAGE;
     y += 44;
-    Slider(ID_IMGSCALE, RPX, y, RPW, L"IMAGE SIZE", &g_ch.imageScale, 10, 400, L"%");
+    Slider(ID_IMGSCALE, RPX, y, RPW, L"IMAGE SIZE", &g_ch.imageScale, 10, 400, L"%", IC_IMAGE);
     y += 64;
-    Head(RPX, &y, RPW, L"PIXEL ART");
+    Head(RPX, &y, RPW, L"PIXEL ART", IC_GRID);
     W* p = Add(ID_PXUSE, WK_BTN, RPX, y, RPW, 36, L"USE PIXEL ART (edit it in Studio)");
     p->variant = (g_ch.style == ST_PIXEL) ? V_ACCENT : V_GHOST;
+    p->icon = IC_GRID;
     y += 44;
-    Slider(ID_PXSCALE, RPX, y, RPW, L"PIXEL SIZE", &g_ch.pxScale, 1, 10, L"px");
+    Slider(ID_PXSCALE, RPX, y, RPW, L"PIXEL SIZE", &g_ch.pxScale, 1, 10, L"px", IC_GRID);
 }
 
 static void LayoutRightPanel(void)
 {
     static const wchar_t* tabs[4] = { L"Basic", L"Shape", L"Effects", L"Advanced" };
+    static const int tic[4] = { IC_SLIDERS, IC_SHAPE, IC_SPARK, IC_WRENCH };
     for (int i = 0; i < 4; i++) {
         W* p = Add(ID_TAB + i, WK_TAB, RPX + i * 105, PVY, 105, 38, tabs[i]);
         p->active = (g_tab == i);
+        p->icon = tic[i];
     }
     int y = PVY + 62;
     if      (g_tab == TAB_BASIC) LayoutBasic(y);
@@ -385,8 +394,8 @@ static void LayoutRightPanel(void)
     else if (g_tab == TAB_FX)    LayoutFx(y);
     else                         LayoutAdv(y);
 
-    Add(ID_APPLY,   WK_BTN, RPX, WINH - 78, RPW - 176, 48, L"APPLY CHANGES")->variant = V_ACCENT;
-    Add(ID_LIBSAVE, WK_BTN, RPX + RPW - 166, WINH - 78, 166, 48, L"SAVE PRESET")->variant = V_GHOST;
+    Ic(Add(ID_APPLY,   WK_BTN, RPX, WINH - 78, RPW - 176, 48, L"APPLY CHANGES"), IC_CHECK)->variant = V_ACCENT;
+    Ic(Add(ID_LIBSAVE, WK_BTN, RPX + RPW - 166, WINH - 78, 166, 48, L"SAVE PRESET"), IC_SAVE)->variant = V_GHOST;
 }
 
 static void LayoutPresetStrip(void)
@@ -403,22 +412,24 @@ static void LayoutPresetStrip(void)
 static void LayoutStudio(void)
 {
     int y = PVY + 20;
-    Head(RPX, &y, RPW, L"TOOLS");
+    static const int tic[8] = { IC_PEN, IC_ERASER, IC_FILL, IC_LINE, IC_RECT, IC_RING, IC_MIRX, IC_MIRY };
+    Head(RPX, &y, RPW, L"TOOLS", IC_PEN);
     for (int i = 0; i < 8; i++) {
         W* p = Add(ID_TOOL + i, WK_BTN, RPX + (i % 4) * 106, y + (i / 4) * 44, 98, 36, kToolName[i]);
         p->variant = V_CHIP;
         p->active = (i == T_MIRX) ? g_mirX : (i == T_MIRY) ? g_mirY : (g_tool == i);
+        p->icon = tic[i];
     }
     y += 100;
-    Head(RPX, &y, RPW, L"COLOR");
+    Head(RPX, &y, RPW, L"COLOR", IC_PALETTE);
     for (int i = 0; i < 8; i++) {
         W* p = Add(ID_SWATCH + i, WK_SWATCH, RPX + i * 44, y, 38, 38, NULL);
         p->col = kPalette[i];
         p->active = ((g_ch.color & 0x00FFFFFF) == (kPalette[i] & 0x00FFFFFF));
     }
-    Add(ID_CUSTOMCOL, WK_BTN, RPX + 8 * 44, y, 38, 38, L"+")->variant = V_CHIP;
+    Ic(Add(ID_CUSTOMCOL, WK_BTN, RPX + 8 * 44, y, 38, 38, L""), IC_PLUS)->variant = V_CHIP;
     y += 58;
-    Head(RPX, &y, RPW, L"CANVAS");
+    Head(RPX, &y, RPW, L"CANVAS", IC_GRID);
     static const int gs[4] = { 16, 24, 32, 48 };
     for (int i = 0; i < 4; i++) {
         wchar_t t[16]; _snwprintf(t, 16, L"%d\x00D7%d", gs[i], gs[i]); t[15] = 0;
@@ -427,12 +438,13 @@ static void LayoutStudio(void)
         p->active = (g_ch.gridW == gs[i]);
     }
     y += 46;
-    Slider(ID_PXSCALE, RPX, y, RPW, L"PIXEL SIZE", &g_ch.pxScale, 1, 10, L"px");
+    Slider(ID_PXSCALE, RPX, y, RPW, L"PIXEL SIZE", &g_ch.pxScale, 1, 10, L"px", IC_GRID);
     y += 60;
-    Add(ID_PXUNDO,  WK_BTN, RPX, y, HALF, 36, L"UNDO")->variant = V_GHOST;
-    Add(ID_PXCLEAR, WK_BTN, RPX + HALF + 20, y, HALF, 36, L"CLEAR")->variant = V_GHOST;
+    Ic(Add(ID_PXUNDO,  WK_BTN, RPX, y, HALF, 36, L"UNDO"), IC_UNDO)->variant = V_GHOST;
+    Ic(Add(ID_PXCLEAR, WK_BTN, RPX + HALF + 20, y, HALF, 36, L"CLEAR"), IC_TRASH)->variant = V_GHOST;
     W* u = Add(ID_PXUSE, WK_BTN, RPX, WINH - 78, RPW, 48, L"USE PIXEL ART AS CROSSHAIR");
     u->variant = (g_ch.style == ST_PIXEL) ? V_ACCENT : V_GHOST;
+    u->icon = IC_CHECK;
 }
 
 static void LayoutPresetsScreen(void)
@@ -464,7 +476,8 @@ static void LayoutProfiles(void)
         row->active = (i == g_activeProfile);
         W* t = Add(ID_PROFAUTO + i, WK_TOGGLE, x + w - 260, y + 24, 170, 30, L"Auto-switch");
         t->val = &g_prof[i].autoLaunch;
-        Add(ID_PROFDEL + i, WK_BTN, x + w - 84, y + 24, 72, 32, L"DELETE")->variant = V_DANGER;
+        t->icon = IC_REFRESH;
+        Ic(Add(ID_PROFDEL + i, WK_BTN, x + w - 84, y + 24, 72, 32, L""), IC_TRASH)->variant = V_DANGER;
         y += 86;
     }
     if (g_nprof < MAXPROFILE) {
@@ -473,6 +486,7 @@ static void LayoutProfiles(void)
         t[71] = 0;
         W* b = Add(ID_PROFADD, WK_BTN, x, y + 10, 360, 44, t);
         b->variant = g_lastGame[0] ? V_ACCENT : V_GHOST;
+        b->icon = IC_PLUS;
     }
 }
 
@@ -492,19 +506,19 @@ static void LayoutSettings(void)
 {
     int x = PVX, w = 460;
     int y = PVY + 30;
-    Head(x, &y, w, L"OVERLAY");
-    Toggle(ID_SET + 0, x, &y, w, L"Overlay enabled", &g_set.overlayOn);
-    Toggle(ID_SET + 1, x, &y, w, L"Only show while a game is focused", &g_set.onlyInGame);
-    Toggle(ID_SET + 2, x, &y, w, L"Auto-detect fullscreen games", &g_set.autoDetect);
-    Toggle(ID_SET + 3, x, &y, w, L"Open this window when a game starts", &g_set.autoOpenPanel);
+    Head(x, &y, w, L"OVERLAY", IC_CROSSHAIR);
+    Toggle(ID_SET + 0, x, &y, w, L"Overlay enabled", &g_set.overlayOn, IC_POWER);
+    Toggle(ID_SET + 1, x, &y, w, L"Only show while a game is focused", &g_set.onlyInGame, IC_EYE);
+    Toggle(ID_SET + 2, x, &y, w, L"Auto-detect fullscreen games", &g_set.autoDetect, IC_GAMEPAD);
+    Toggle(ID_SET + 3, x, &y, w, L"Open this window when a game starts", &g_set.autoOpenPanel, IC_HOME);
     y += 14;
-    Head(x, &y, w, L"SYSTEM");
-    Toggle(ID_SET + 4, x, &y, w, L"Start with Windows", &g_set.startWithWindows);
-    Toggle(ID_SET + 5, x, &y, w, L"Check for updates automatically", &g_set.autoUpdate);
+    Head(x, &y, w, L"SYSTEM", IC_GEAR);
+    Toggle(ID_SET + 4, x, &y, w, L"Start with Windows", &g_set.startWithWindows, IC_POWER);
+    Toggle(ID_SET + 5, x, &y, w, L"Check for updates automatically", &g_set.autoUpdate, IC_REFRESH);
     y += 10;
-    Add(ID_UPDCHECK, WK_BTN, x, y, 210, 38, L"CHECK FOR UPDATES")->variant = V_GHOST;
+    Ic(Add(ID_UPDCHECK, WK_BTN, x, y, 210, 38, L"CHECK FOR UPDATES"), IC_REFRESH)->variant = V_GHOST;
     if (UpdateAvailable())
-        Add(ID_UPDINSTALL, WK_BTN, x + 224, y, 236, 38, L"DOWNLOAD & INSTALL")->variant = V_ACCENT;
+        Ic(Add(ID_UPDINSTALL, WK_BTN, x + 224, y, 236, 38, L"DOWNLOAD & INSTALL"), IC_DOWNLOAD)->variant = V_ACCENT;
     y += 50;
     Add(0, WK_TEXT, x, y, w, 18, UpdateStatusText());
     y += 30;
@@ -528,44 +542,16 @@ static void Layout(void)
 }
 
 // ------------------------------------------------------------------ preview
-static void EnvFill(uint32_t* b, int w, int h, int env)
+// the preview is the crosshair and nothing else - a flat, neutral field
+static void PreviewBg(uint32_t* b, int w, int h)
 {
-    if (env == 0) {                                   // live game frame
-        int fw = 0, fh = 0;
-        const uint32_t* f = CapFrame(&fw, &fh);
-        if (f && fw > 0 && fh > 0) {
-            // cover-fit so the centre of the frame stays the centre of the box
-            double sx = (double)fw / w, sy = (double)fh / h;
-            double s = sx < sy ? sx : sy;
-            int cw = (int)(w * s), chh = (int)(h * s);
-            int ox = (fw - cw) / 2, oy = (fh - chh) / 2;
-            for (int y = 0; y < h; y++) {
-                const uint32_t* srow = f + (size_t)(oy + (int)((int64_t)y * chh / h)) * fw;
-                uint32_t* drow = b + (size_t)y * w;
-                for (int x = 0; x < w; x++)
-                    drow[x] = srow[ox + (int)((int64_t)x * cw / w)] | 0xFF000000;
-            }
-            return;
-        }
-        env = 1;
-    }
     for (int y = 0; y < h; y++) {
         double t = (double)y / (h ? h : 1);
-        for (int x = 0; x < w; x++) {
-            int r, g, bl;
-            switch (env) {
-            case 2: r = 22 + (int)(t * 26);  g = 30 + (int)(t * 34);  bl = 46 + (int)(t * 40); break;
-            case 3: r = 42 + (int)(t * 26);  g = 92 + (int)(t * 40);  bl = 38 + (int)(t * 18); break;
-            case 4: r = 92 - (int)(t * 40);  g = 158 - (int)(t * 50); bl = 224 - (int)(t * 40); break;
-            default: r = 9 + (int)(t * 6);   g = 12 + (int)(t * 7);   bl = 17 + (int)(t * 9);  break;
-            }
-            if (env == 3) {
-                int n = ((x * 73856093) ^ (y * 19349663)) & 31;
-                r += n - 16; g += n - 16; bl += n - 16;
-            }
-            b[y * w + x] = 0xFF000000 | ((uint32_t)Clamp(r, 0, 255) << 16) |
-                           ((uint32_t)Clamp(g, 0, 255) << 8) | (uint32_t)Clamp(bl, 0, 255);
-        }
+        uint32_t row = 0xFF000000 |
+            ((uint32_t)Clamp(10 + (int)(t * 5), 0, 255) << 16) |
+            ((uint32_t)Clamp(13 + (int)(t * 6), 0, 255) << 8) |
+             (uint32_t)Clamp(18 + (int)(t * 8), 0, 255);
+        for (int x = 0; x < w; x++) b[y * w + x] = row;
     }
 }
 
@@ -586,7 +572,7 @@ static void PaintPreviewDev(HDC dc, RECT dev)
     if (w < 8 || h < 8) return;
     uint32_t* buf = (uint32_t*)malloc((size_t)w * h * 4);
     if (!buf) return;
-    EnvFill(buf, w, h, g_set.previewEnv);
+    PreviewBg(buf, w, h);
 
     int mcx = w / 2, mcy = h / 2;
     uint32_t guide = 0x22FFFFFF;
@@ -660,22 +646,29 @@ static void PaintThumb(HDC dc, RECT r, const Crosshair* c, int lift)
 static void PaintWidget(HDC dc, W* p, int hover)
 {
     switch (p->kind) {
-    case WK_HEAD:
-        Txt(dc, p->r, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
+    case WK_HEAD: {
+        RECT t = p->r;
+        if (p->icon) {
+            Icon(dc, p->icon, p->r.left + 7, (p->r.top + p->r.bottom) / 2, 7, C_TXT2);
+            t.left += 20;
+        }
+        Txt(dc, t, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
         break;
+    }
     case WK_TEXT:
         Txt(dc, p->r, p->text, C_TXT2, g_f, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
         break;
 
     case WK_CHIP: {
         Card(dc, p->r, C_PANEL, hover ? Acc() : C_BORDER, 12);
-        RECT l = p->r; l.left += (p->active ? 44 : 16); l.top += 8; l.bottom = l.top + 16;
+        int mid = (p->r.top + p->r.bottom) / 2;
+        RECT l = p->r; l.left += (p->icon ? 52 : 16); l.top += 8; l.bottom = l.top + 16;
         Txt(dc, l, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
         RECT v = p->r; v.left = l.left; v.top = p->r.top + 24; v.bottom = v.top + 20;
         Txt(dc, v, p->sub, C_TXT, g_fb, DT_LEFT | DT_VCENTER);
-        if (p->active) {
-            Dot(dc, p->r.left + 26, (p->r.top + p->r.bottom) / 2, 13, C_RAISED);
-            Dot(dc, p->r.left + 26, (p->r.top + p->r.bottom) / 2, 4, Acc());
+        if (p->icon) {
+            Dot(dc, p->r.left + 30, mid, 15, C_RAISED);
+            Icon(dc, p->icon, p->r.left + 30, mid, 8, Acc());
         }
         break;
     }
@@ -686,15 +679,18 @@ static void PaintWidget(HDC dc, W* p, int hover)
             RECT bar; SetRect(&bar, p->r.right - 4, p->r.top + 12, p->r.right - 1, p->r.bottom - 12);
             Fill(dc, bar, Acc());
         } else if (hover) Card(dc, p->r, C_PANEL, C_PANEL, 12);
-        Dot(dc, p->r.left + 22, (p->r.top + p->r.bottom) / 2, 7, p->active ? Acc() : C_TXT2);
-        Dot(dc, p->r.left + 22, (p->r.top + p->r.bottom) / 2, 3, p->active ? C_RAISED : C_PANEL);
-        RECT t = p->r; t.left += 44;
+        Icon(dc, p->icon, p->r.left + 24, (p->r.top + p->r.bottom) / 2, 9,
+             p->active ? Acc() : C_TXT2);
+        RECT t = p->r; t.left += 46;
         Txt(dc, t, p->text, p->active ? C_TXT : C_TXT2, p->active ? g_fb : g_f, DT_LEFT | DT_VCENTER);
         break;
     }
 
     case WK_TAB: {
-        Txt(dc, p->r, p->text, p->active ? C_TXT : C_TXT2, p->active ? g_fb : g_f, DT_CENTER | DT_VCENTER);
+        COLORREF c = p->active ? C_TXT : C_TXT2;
+        Icon(dc, p->icon, p->r.left + 20, (p->r.top + p->r.bottom) / 2 - 1, 8, p->active ? Acc() : c);
+        RECT t = p->r; t.left += 36;
+        Txt(dc, t, p->text, c, p->active ? g_fb : g_f, DT_LEFT | DT_VCENTER);
         RECT u; SetRect(&u, p->r.left + 10, p->r.bottom - 2, p->r.right - 10, p->r.bottom);
         Fill(dc, u, p->active ? Acc() : C_BORDER);
         break;
@@ -707,7 +703,16 @@ static void PaintWidget(HDC dc, W* p, int hover)
         else if (p->active)              { fill = AccDim(); bd = Acc();    tc = Acc(); }
         else if (hover)                  { fill = C_HOVER; }
         Card(dc, p->r, fill, bd, 10);
-        Txt(dc, p->r, p->text, tc, (p->variant == V_ACCENT) ? g_fb : g_fs, DT_CENTER | DT_VCENTER);
+        int mid = (p->r.top + p->r.bottom) / 2;
+        if (p->icon && !p->text[0]) {
+            Icon(dc, p->icon, (p->r.left + p->r.right) / 2, mid, 7, tc);
+        } else if (p->icon) {
+            Icon(dc, p->icon, p->r.left + 20, mid, 8, tc);
+            RECT t = p->r; t.left += 34;
+            Txt(dc, t, p->text, tc, (p->variant == V_ACCENT) ? g_fb : g_fs, DT_LEFT | DT_VCENTER);
+        } else {
+            Txt(dc, p->r, p->text, tc, (p->variant == V_ACCENT) ? g_fb : g_fs, DT_CENTER | DT_VCENTER);
+        }
         break;
     }
 
@@ -727,6 +732,10 @@ static void PaintWidget(HDC dc, W* p, int hover)
     case WK_TOGGLE: {
         int on = p->val && *p->val;
         RECT t = p->r; t.right -= 56;
+        if (p->icon) {
+            Icon(dc, p->icon, p->r.left + 9, (p->r.top + p->r.bottom) / 2, 8, on ? Acc() : C_TXT2);
+            t.left += 26;
+        }
         Txt(dc, t, p->text, on ? C_TXT : C_TXT2, g_f, DT_LEFT | DT_VCENTER);
         RECT sw; SetRect(&sw, p->r.right - 46, p->r.top + 5, p->r.right, p->r.top + 25);
         Card(dc, sw, on ? Acc() : C_RAISED, on ? Acc() : C_BORDER, 10);
@@ -740,6 +749,10 @@ static void PaintWidget(HDC dc, W* p, int hover)
         int v = p->val ? *p->val : 0;
         int boxw = 62, w = (p->r.right - p->r.left) - boxw - 10;
         RECT lab; SetRect(&lab, p->r.left, p->r.top, p->r.right, p->r.top + 15);
+        if (p->icon) {
+            Icon(dc, p->icon, p->r.left + 6, p->r.top + 7, 6, C_TXT2);
+            lab.left += 17;
+        }
         Txt(dc, lab, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
 
         int ty = p->r.top + 27;
@@ -838,15 +851,7 @@ static void PaintSidebar(HDC dc)
 
     Dot(dc, 48, 56, 20, C_RAISED);
     Dot(dc, 48, 56, 19, C_PANEL);
-    HPEN pen = CreatePen(PS_SOLID, 2, Acc());
-    HGDIOBJ op = SelectObject(dc, pen), ob = SelectObject(dc, GetStockObject(NULL_BRUSH));
-    Ellipse(dc, 34, 42, 62, 70);
-    MoveToEx(dc, 48, 38, NULL); LineTo(dc, 48, 48);
-    MoveToEx(dc, 48, 64, NULL); LineTo(dc, 48, 74);
-    MoveToEx(dc, 30, 56, NULL); LineTo(dc, 40, 56);
-    MoveToEx(dc, 56, 56, NULL); LineTo(dc, 66, 56);
-    SelectObject(dc, op); SelectObject(dc, ob); DeleteObject(pen);
-    Dot(dc, 48, 56, 3, Acc());
+    Icon(dc, IC_CROSSHAIR, 48, 56, 13, Acc());
     TxtAt(dc, 78, 40, 170, 32, APP_NAME, C_TXT, g_fh, DT_LEFT | DT_VCENTER);
 
     // status card
@@ -894,19 +899,13 @@ static void PaintPreviewCard(HDC dc)
     RECT card; SetRect(&card, PVX, PVY, PVX + PVW, PVY + PVH);
     Card(dc, card, C_PANEL, C_BORDER, 16);
 
-    Dot(dc, PVX + 24, PVY + 24, 4, Acc());
-    TxtAt(dc, PVX + 36, PVY + 14, 200, 20, L"LIVE PREVIEW", C_TXT, g_fs, DT_LEFT | DT_VCENTER);
-    TxtAt(dc, PVX + 36, PVY + 32, 260, 16,
-          (g_set.previewEnv == 0 && CapHasFrame()) ? L"Your game, captured live"
-                                                   : L"Your crosshair in real time",
+    Icon(dc, IC_CROSSHAIR, PVX + 28, PVY + 26, 9, Acc());
+    TxtAt(dc, PVX + 44, PVY + 14, 200, 20, L"PREVIEW", C_TXT, g_fs, DT_LEFT | DT_VCENTER);
+    TxtAt(dc, PVX + 44, PVY + 32, 300, 16, L"Your crosshair, actual size",
           C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
 
     RECT cv = CanvasRect();
     StageBlit(dc, cv);
-
-    if (g_set.previewEnv == 0 && !CapHasFrame())
-        TxtAt(dc, cv.left, cv.top + 12, cv.right - cv.left, 18,
-              L"No game captured yet - alt-tab into your game once", C_TXT2, g_fxs, DT_CENTER | DT_VCENTER);
 
     int rw = 0, rh = 0; OverlayResolution(&rw, &rh);
     struct { const wchar_t* k; int v; } info[4] = {
@@ -1184,7 +1183,6 @@ static void Command(int id)
         }
         return;
     }
-    if (id >= ID_ENV && id < ID_ENV + 5) { g_set.previewEnv = id - ID_ENV; CfgSave(); ShellRedraw(); return; }
     if (id >= ID_ZOOM && id < ID_ZOOM + 3) {
         static const int zv[3] = { 1, 2, 4 };
         g_set.previewZoom = zv[id - ID_ZOOM]; CfgSave(); ShellRedraw(); return;
