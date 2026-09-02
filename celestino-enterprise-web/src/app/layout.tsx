@@ -11,7 +11,7 @@ import { Analytics } from "@/components/analytics/analytics";
 import { JsonLd } from "@/components/seo/json-ld";
 import { graph, organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 
-const isProduction = process.env.VERCEL_ENV === "production" || process.env.NEXT_PUBLIC_SITE_ENV === "production";
+const isProduction = process.env.NEXT_PUBLIC_SITE_ENV === "production";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   applicationName: site.name,
   referrer: "strict-origin-when-cross-origin",
   formatDetection: { telephone: false, email: false, address: false },
-  // Preview and staging deployments must never be indexed. Production sets NEXT_PUBLIC_SITE_ENV=production.
+  // Indexing is opt-in: only NEXT_PUBLIC_SITE_ENV=production allows it. Previews, staging and pre-cutover production stay noindex.
   robots: isProduction ? { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } : { index: false, follow: false },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon" }],

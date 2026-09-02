@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/content/site";
 
-const isProduction = process.env.VERCEL_ENV === "production" || process.env.NEXT_PUBLIC_SITE_ENV === "production";
+const isProduction = process.env.NEXT_PUBLIC_SITE_ENV === "production";
 
 /**
  * Production allows crawling of everything public and references the sitemap.

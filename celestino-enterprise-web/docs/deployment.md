@@ -50,7 +50,7 @@ Project created 2026-09-02: `celestino-enterprise-web` (`prj_lZvzuVwmam2nwkxMggB
 | Production | `production` | allow all, sitemap | index, follow |
 | Preview / local | anything else | disallow all | noindex, nofollow |
 
-`VERCEL_ENV=production` also enables indexing, so a misconfigured preview cannot leak into the index unless it is promoted.
+Only `NEXT_PUBLIC_SITE_ENV=production` enables indexing. A production deployment on a `*.vercel.app` URL without that variable stays noindex, so nothing is indexed before the domain cutover.
 
 ## Release procedure
 
