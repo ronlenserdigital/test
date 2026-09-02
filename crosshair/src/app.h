@@ -7,8 +7,8 @@
 
 #define APP_NAME    L"DEADCENTER"
 #define APP_ID      L"DeadCenter"
-#define APP_VER     L"1.4.0"
-#define APP_VERNUM  10400
+#define APP_VER     L"1.4.1"
+#define APP_VERNUM  10401
 #define APP_CLASS   L"DeadCenterShell"
 #define OV_CLASS    L"DeadCenterOverlay"
 #define MSG_CLASS   L"DeadCenterMsg"

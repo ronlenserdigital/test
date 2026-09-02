@@ -310,8 +310,17 @@ static void Txt(HDC dc, RECT r, const wchar_t* s, COLORREF c, HFONT f, UINT fmt)
     HGDIOBJ of = SelectObject(dc, f);
     SetTextColor(dc, c);
     SetBkMode(dc, TRANSPARENT);
-    DrawTextW(dc, s, -1, &r, fmt | DT_SINGLELINE);
+    // DT_NOPREFIX: an ampersand in a label is an ampersand, not a mnemonic
+    DrawTextW(dc, s, -1, &r, fmt | DT_SINGLELINE | DT_NOPREFIX);
     SelectObject(dc, of);
+}
+
+// small all-caps section labels get a little tracking so they read as labels
+static void TxtCaps(HDC dc, RECT r, const wchar_t* s, COLORREF c, HFONT f, UINT fmt)
+{
+    SetTextCharacterExtra(dc, 1);
+    Txt(dc, r, s, c, f, fmt);
+    SetTextCharacterExtra(dc, 0);
 }
 
 static void TxtAt(HDC dc, int x, int y, int w, int h, const wchar_t* s, COLORREF c, HFONT f, UINT fmt)
@@ -977,7 +986,7 @@ static void PaintWidget(HDC dc, W* p, int hover)
             Icon(dc, p->icon, p->r.left + 7, (p->r.top + p->r.bottom) / 2, 7, C_TXT2);
             t.left += 20;
         }
-        Txt(dc, t, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
+        TxtCaps(dc, t, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
         break;
     }
     case WK_TEXT:
@@ -1094,7 +1103,7 @@ static void PaintWidget(HDC dc, W* p, int hover)
             Icon(dc, p->icon, p->r.left + 6, p->r.top + 7, 6, C_TXT2);
             lab.left += 17;
         }
-        Txt(dc, lab, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
+        TxtCaps(dc, lab, p->text, C_TXT2, g_fxs, DT_LEFT | DT_VCENTER);
 
         int ty = p->r.top + 27;
         RECT tr; SetRect(&tr, p->r.left, ty, p->r.left + w, ty + 5);
@@ -1252,7 +1261,10 @@ static void PaintSidebar(HDC dc)
 
     BrandMark(dc, 46, 54, 22, Acc(), DcMix(DC_PANEL, DC_BG, 120));
     TxtAt(dc, 78, 38, 170, 32, APP_NAME, C_TXT, g_fh, DT_LEFT | DT_VCENTER);
-    TxtAt(dc, 79, 60, 170, 14, L"PRECISION. YOUR WAY.", DC_INK_MUTE, g_fxs, DT_LEFT | DT_VCENTER);
+    {
+        RECT tag; SetRect(&tag, 79, 58, 249, 74);
+        TxtCaps(dc, tag, L"PRECISION. YOUR WAY.", DC_INK_MUTE, g_fxs, DT_LEFT | DT_VCENTER);
+    }
     RECT hr; SetRect(&hr, 20, 88, SIDEW - 20, 89);
     Fill(dc, hr, DcMix(DC_PANEL, Acc(), 30));
 
@@ -1923,16 +1935,37 @@ static BOOL HaveFace(const wchar_t* name)
 static const wchar_t* PickFace(void)
 {
     static const wchar_t* want[] = { L"Inter", L"Geist", L"Manrope", L"Sora",
-                                     L"Segoe UI Variable Display", NULL };
+                                     L"Segoe UI Variable Text", NULL };
     for (int i = 0; want[i]; i++) if (HaveFace(want[i])) return want[i];
     return L"Segoe UI";
 }
 
+// headings want the display optical size, small labels the small one
+static const wchar_t* PickFaceDisplay(const wchar_t* body)
+{
+    if (wcscmp(body, L"Segoe UI Variable Text") == 0 &&
+        HaveFace(L"Segoe UI Variable Display")) return L"Segoe UI Variable Display";
+    return body;
+}
+
+static const wchar_t* PickFaceSmall(const wchar_t* body)
+{
+    if (wcscmp(body, L"Segoe UI Variable Text") == 0 &&
+        HaveFace(L"Segoe UI Variable Small")) return L"Segoe UI Variable Small";
+    return body;
+}
+
+#ifndef CLEARTYPE_NATURAL_QUALITY
+#define CLEARTYPE_NATURAL_QUALITY 6
+#endif
+
 static HFONT MakeFont(int px, int weight, const wchar_t* face)
 {
+    // OUT_TT_ONLY_PRECIS keeps GDI off any bitmap face, CLEARTYPE_NATURAL is
+    // the subpixel renderer with proper glyph spacing.
     return CreateFontW(-px, 0, 0, 0, weight, 0, 0, 0, DEFAULT_CHARSET,
-                       OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                       DEFAULT_PITCH | FF_DONTCARE, face);
+                       OUT_TT_ONLY_PRECIS, CLIP_DEFAULT_PRECIS,
+                       CLEARTYPE_NATURAL_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face);
 }
 
 BOOL ShellCreate(void)
@@ -1972,14 +2005,16 @@ BOOL ShellCreate(void)
     EnableBackdrop(g_hwnd);
     ApplyWindowAlpha();
 
-    const wchar_t* face = PickFace();
+    const wchar_t* face        = PickFace();
+    const wchar_t* faceDisplay  = PickFaceDisplay(face);
+    const wchar_t* faceSmall    = PickFaceSmall(face);
     // grayscale AA, not ClearType: subpixel text on a translucent surface fringes
-    g_f   = MakeFont(14, FW_NORMAL,   face);
-    g_fb  = MakeFont(14, FW_SEMIBOLD, face);
-    g_fs  = MakeFont(13, FW_SEMIBOLD, face);
-    g_fxs = MakeFont(11, FW_SEMIBOLD, face);
-    g_fh  = MakeFont(20, FW_BOLD,     face);
-    g_fxl = MakeFont(30, FW_LIGHT,    face);
+    g_f   = MakeFont(15, FW_MEDIUM,   face);
+    g_fb  = MakeFont(15, FW_SEMIBOLD, face);
+    g_fs  = MakeFont(14, FW_MEDIUM,   face);
+    g_fxs = MakeFont(12, FW_SEMIBOLD, faceSmall);
+    g_fh  = MakeFont(21, FW_SEMIBOLD, faceDisplay);
+    g_fxl = MakeFont(30, FW_LIGHT,    faceDisplay);
     (void)g_fxl;
     return TRUE;
 }
