@@ -11,7 +11,7 @@ Every item below is either unverified or conflicting in public sources. The site
 | 5 | Security disclosure email | `/.well-known/security.txt`, responsible-disclosure page | `site.securityContactEmail` | Not supplied. security.txt returns 404 until set. | No (recommended) |
 | 6 | Support hours & coverage tiers | Nationwide support page, FAQ, managed IT page | `site.support.hours` | Directories say Mon–Fri 9–5; existing site says "up to 24/7/365". Confirm contracted tiers. | No |
 | 7 | Leadership names, roles, bios, photos | About page, author profiles, Person schema | `site.people`, `src/content/authors.ts` | Registered agent is Josefino Celestino; background per RocketReach unverified. Articles attributed to "Celestino Engineering Team" until named authors are confirmed. | No |
-| 8 | Founding year / "25+ years" basis | Hero trust element, About | `site.experienceYears` | Existing site title says 25+; LLC formed 2019; ZoomInfo says founded 2017. Site phrases it as "years of IT engineering experience". Confirm wording. | ⛔ |
+| 8 | Years of experience | Hero trust element, About | `site.experienceYears` | **Confirmed 2026-09-02: 31 years.** Published as "31 years of IT engineering experience" (team experience; LLC formed 2019). | Resolved |
 | 9 | "Award-winning" | Existing site copy | not rendered | No award named anywhere. Not published. Supply award name, issuer, year to add. | No |
 | 10 | Government / public-sector past performance | Government page, industry page, utility rail | `site.government.servesPublicSector` | Unknown. Page is a capabilities framework only. | No |
 | 11 | UEI, CAGE, DUNS | Government page | `site.government.uei/cage/duns` | Unknown | No |

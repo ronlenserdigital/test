@@ -14,7 +14,7 @@ import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
 const title = "About Celestino Enterprise";
 const description =
-  "Celestino Enterprise is a Virginia technology firm delivering managed IT, cybersecurity, recovery and application engineering with more than 25 years of engineering experience and onsite support across the United States.";
+  "Celestino Enterprise is a Virginia technology firm delivering managed IT, cybersecurity, recovery and application engineering with 31 years of engineering experience and onsite support across the United States.";
 
 export const metadata: Metadata = buildMetadata({ title, description, path: "/about" });
 const crumbs = [

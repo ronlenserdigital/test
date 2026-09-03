@@ -42,12 +42,12 @@ export const site = {
   url: SITE_URL,
   locale: "en_US",
 
-  /** Founded/experience claims. The existing site title states "25+ Experience in IT Solution". */
+  /** Experience claim. Client-supplied 2026-09-02: 31 years. (The legacy site title said "25+".) */
   experienceYears: {
-    value: "25+",
-    verified: false,
-    source: "existing-site",
-    note: "Taken from the existing site's title tag and hero copy. Keep phrasing as 'years of IT experience' (team experience), not 'years in business' — the LLC was registered in 2019.",
+    value: "31",
+    verified: true,
+    source: "client-supplied",
+    note: "Confirmed by the client as 31 years of IT experience. Keep phrasing as 'years of IT engineering experience' (team experience), not 'years in business'; the LLC was registered in 2019.",
   } satisfies Claim,
 
   address: {
