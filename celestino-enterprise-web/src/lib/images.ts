@@ -38,18 +38,38 @@ const ALT: Record<string, string> = {
   "case-study-placeholder": "",
 };
 
+/** Delivered filenames that differ from route slugs. */
+const ALIASES: Record<string, string> = {
+  "service-web-application-engineering": "service-web-ecommerce",
+  "industry-government-public-sector": "industry-government",
+};
+
 const PUBLIC_DIR = path.join(process.cwd(), "public", "images");
 const EXT = ["jpg", "jpeg", "webp", "png"];
 
 /** Returns the image descriptor if the file exists in public/images, otherwise null. */
 export function getImage(name: string): SiteImage | null {
+  const file = ALIASES[name] ?? name;
   for (const ext of EXT) {
-    if (existsSync(path.join(PUBLIC_DIR, `${name}.${ext}`))) {
-      return { src: `/images/${name}.${ext}`, alt: ALT[name] ?? "" };
+    if (existsSync(path.join(PUBLIC_DIR, `${file}.${ext}`))) {
+      return { src: `/images/${file}.${ext}`, alt: ALT[name] ?? "" };
     }
   }
   return null;
 }
 
+/** 3:2 card crop when a dedicated `<name>-card` file exists, otherwise the master. */
+export function getCardImage(name: string): SiteImage | null {
+  const file = ALIASES[name] ?? name;
+  for (const ext of EXT) {
+    if (existsSync(path.join(PUBLIC_DIR, `${file}-card.${ext}`))) {
+      return { src: `/images/${file}-card.${ext}`, alt: ALT[name] ?? "" };
+    }
+  }
+  return getImage(name);
+}
+
 export const serviceImage = (slug: string) => getImage(`service-${slug}`);
+export const serviceCardImage = (slug: string) => getCardImage(`service-${slug}`);
 export const industryImage = (slug: string) => getImage(`industry-${slug}`);
+export const industryCardImage = (slug: string) => getCardImage(`industry-${slug}`);

@@ -4,6 +4,8 @@ import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/heading";
 import { Icon } from "@/components/icons/icon";
 import { industries } from "@/content/industries";
+import { industryCardImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 
 /** Industries as an editorial list with the regulatory context, not a card grid. */
 export function IndustriesList() {
@@ -18,10 +20,14 @@ export function IndustriesList() {
         <ul className="divide-y divide-line border-y border-line">
           {industries.map((ind, i) => (
             <li key={ind.slug} data-reveal style={{ ["--reveal-delay" as string]: `${i * 50}ms` }}>
-              <Link href={`/industries/${ind.slug}`} className="group grid gap-3 py-5 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:items-center sm:gap-5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-md border border-line bg-surface-1 text-accent">
-                  <Icon name={ind.icon} size={20} />
-                </span>
+              <Link href={`/industries/${ind.slug}`} className={`group grid gap-3 py-5 sm:items-center sm:gap-5 ${industryCardImage(ind.slug) ? "sm:grid-cols-[9rem_minmax(0,1fr)_auto]" : "sm:grid-cols-[2.5rem_minmax(0,1fr)_auto]"}`}>
+                {industryCardImage(ind.slug) ? (
+                  <Photo image={industryCardImage(ind.slug)} ratio="3/2" sizes="(min-width: 640px) 9rem, 100vw" className="w-full sm:w-36" />
+                ) : (
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md border border-line bg-surface-1 text-accent">
+                    <Icon name={ind.icon} size={20} />
+                  </span>
+                )}
                 <span className="flex flex-col gap-1">
                   <span className="font-display text-lg font-semibold text-fg group-hover:text-accent">{ind.name}</span>
                   <span className="text-sm text-fg-2">{ind.shortDescription}</span>

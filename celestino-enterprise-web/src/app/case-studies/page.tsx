@@ -11,6 +11,8 @@ import { getIndustry } from "@/content/industries";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
+import { getImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 
 const title = "Case Studies";
 const description =
@@ -53,7 +55,10 @@ export default function CaseStudiesPage() {
             </ul>
           ) : (
             <div className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <SectionHeading eyebrow="The standard" title="What every published case study contains." lede="Case studies are in the client-approval process and will appear here as they are released. In the meantime, the industry pages describe the environments and obligations Celestino works in." />
+              <div className="flex flex-col gap-8">
+                <SectionHeading eyebrow="The standard" title="What every published case study contains." lede="Case studies are in the client-approval process and will appear here as they are released. In the meantime, the industry pages describe the environments and obligations Celestino works in." />
+                <Photo image={getImage("case-study-placeholder")} ratio="3/2" decorative sizes="(min-width: 1024px) 40vw, 100vw" />
+              </div>
               <ol className="grid gap-4 sm:grid-cols-2">
                 {standard.map((s, i) => (
                   <li key={s.title} className="flex flex-col gap-2 rounded-lg border border-line bg-surface-1 p-6">
