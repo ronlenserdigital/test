@@ -4,7 +4,7 @@ import type { SiteImage } from "@/lib/images";
 
 interface PhotoProps {
   image: SiteImage | null;
-  ratio?: "16/9" | "3/2" | "4/5" | "21/9";
+  ratio?: "16/9" | "3/2" | "4/3" | "4/5" | "21/9";
   priority?: boolean;
   sizes?: string;
   className?: string;
@@ -12,7 +12,7 @@ interface PhotoProps {
   decorative?: boolean;
 }
 
-const ratios = { "16/9": "aspect-[16/9]", "3/2": "aspect-[3/2]", "4/5": "aspect-[4/5]", "21/9": "aspect-[21/9]" };
+const ratios = { "16/9": "aspect-[16/9]", "3/2": "aspect-[3/2]", "4/3": "aspect-[4/3]", "4/5": "aspect-[4/5]", "21/9": "aspect-[21/9]" };
 
 /**
  * Responsive photo in a fixed-ratio frame. Renders nothing when the image is not
