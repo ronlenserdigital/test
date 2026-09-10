@@ -35,7 +35,8 @@ export default function CaseStudiesPage() {
   return (
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/case-studies", title, description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
-      <PageHero crumbs={crumbs} eyebrow="Case studies" title="Engagements, documented to a standard." intro="A case study on this site is a record the client has read and approved. If that sounds slower than the usual marketing page, it is. It is also the only kind worth citing in a procurement response." />
+      <PageHero image={getImage("case-study-placeholder")}
+        crumbs={crumbs} eyebrow="Case studies" title="Engagements, documented to a standard." intro="A case study on this site is a record the client has read and approved. If that sounds slower than the usual marketing page, it is. It is also the only kind worth citing in a procurement response." />
       <Section theme="light" spacing="default">
         <Container>
           {publishedCaseStudies.length ? (

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HomeHero } from "@/components/sections/home-hero";
 import { TrustLayer } from "@/components/sections/trust-layer";
+import { PhotoMosaic } from "@/components/sections/photo-mosaic";
 import { Capabilities } from "@/components/sections/capabilities";
 import { OperatingModelSection } from "@/components/sections/operating-model-section";
 import { IndustriesList } from "@/components/sections/industries-list";
@@ -32,6 +33,7 @@ export default function HomePage() {
       <JsonLd data={graph(webPageJsonLd({ path: "/", title, description }))} />
       <HomeHero />
       <TrustLayer />
+      <PhotoMosaic />
       <Capabilities />
       <OperatingModelSection />
       <IndustriesList />

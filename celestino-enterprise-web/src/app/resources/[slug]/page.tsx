@@ -17,6 +17,8 @@ import { formatDate } from "@/lib/format";
 import { inlineMarkdown } from "@/lib/inline-markdown";
 import { JsonLd } from "@/components/seo/json-ld";
 import { articleJsonLd, breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
+import { categoryImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 
 type Params = { slug: string };
 
@@ -86,6 +88,8 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
                 </div>
               </dl>
             </header>
+
+            <Photo image={categoryImage(a.category)} ratio="21/9" priority sizes="(min-width: 1024px) 60vw, 100vw" className="mt-8 max-w-[68ch]" />
 
             <div className="mt-8 max-w-[68ch] rounded-lg border border-accent/30 bg-accent-soft p-6">
               <p className="mono-label mb-2 text-accent">Short answer</p>

@@ -8,6 +8,7 @@ import { ArticleCard } from "@/components/ui/article-card";
 import { CTASection } from "@/components/ui/cta-section";
 import { articles, articleCategories } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -28,6 +29,7 @@ export default function ResourcesPage() {
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/resources", title, description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
       <PageHero
+        image={getImage("service-security-risk-advisory")}
         crumbs={crumbs}
         eyebrow="Resources"
         title="Written by the engineers who do the work."
@@ -42,9 +44,9 @@ export default function ResourcesPage() {
               </Link>
             ))}
           </nav>
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="flex flex-col gap-6">
             {lead ? <ArticleCard article={lead} featured headingLevel="h2" /> : null}
-            <div className="grid gap-6 lg:col-span-2 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {rest.map((a) => (
                 <ArticleCard key={a.slug} article={a} headingLevel="h2" />
               ))}

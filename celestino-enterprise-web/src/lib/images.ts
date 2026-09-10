@@ -73,3 +73,39 @@ export const serviceImage = (slug: string) => getImage(`service-${slug}`);
 export const serviceCardImage = (slug: string) => getCardImage(`service-${slug}`);
 export const industryImage = (slug: string) => getImage(`industry-${slug}`);
 export const industryCardImage = (slug: string) => getCardImage(`industry-${slug}`);
+
+/** Pillar → representative service card. */
+const PILLAR_IMAGE: Record<string, string> = {
+  protect: "service-cybersecurity",
+  operate: "service-managed-it",
+  resilience: "service-backup-disaster-recovery",
+  modernize: "service-cloud-infrastructure",
+  build: "service-software-development",
+};
+export const pillarImage = (pillar: string) => getCardImage(PILLAR_IMAGE[pillar] ?? "");
+
+/** Solution → closest service photo. */
+const SOLUTION_IMAGE: Record<string, string> = {
+  "cyber-resilience": "service-cybersecurity",
+  "infrastructure-modernization": "service-cloud-infrastructure",
+  "business-continuity": "service-backup-disaster-recovery",
+  "cloud-security": "service-cloud-infrastructure",
+  "secure-application-engineering": "service-software-development",
+  "it-operational-resilience": "service-managed-it",
+};
+export const solutionImage = (slug: string) => getImage(SOLUTION_IMAGE[slug] ?? "");
+export const solutionCardImage = (slug: string) => getCardImage(SOLUTION_IMAGE[slug] ?? "");
+
+/** Article category → photo, used on article cards and article headers. */
+const CATEGORY_IMAGE: Record<string, string> = {
+  cybersecurity: "service-cybersecurity",
+  "it-operations": "service-managed-it",
+  cloud: "service-cloud-infrastructure",
+  compliance: "service-security-risk-advisory",
+  resilience: "service-backup-disaster-recovery",
+  "government-technology": "industry-government-public-sector",
+  "software-engineering": "service-software-development",
+  "ai-automation": "service-ai-automation",
+};
+export const categoryImage = (category: string) => getImage(CATEGORY_IMAGE[category] ?? "");
+export const categoryCardImage = (category: string) => getCardImage(CATEGORY_IMAGE[category] ?? "");

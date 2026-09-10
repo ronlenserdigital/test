@@ -12,6 +12,7 @@ import { site } from "@/content/site";
 import { getService } from "@/content/services";
 import { getArticle } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -55,6 +56,7 @@ export default function GovernmentPage() {
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/government", title, description }), breadcrumbJsonLd(crumbs))} />
       <PageHero
+        image={getImage("industry-government-public-sector")}
         crumbs={crumbs}
         eyebrow="Government & public sector"
         title="Capabilities, identifiers and frameworks on one page."

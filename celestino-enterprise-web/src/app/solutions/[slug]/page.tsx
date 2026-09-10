@@ -16,6 +16,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, faqJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Icon } from "@/components/icons/icon";
+import { solutionImage } from "@/lib/images";
 
 type Params = { slug: string };
 
@@ -51,6 +52,7 @@ export default async function SolutionPage({ params }: { params: Promise<Params>
         eyebrow={`${s.hero.eyebrow} · ${s.name}`}
         title={s.hero.headline}
         intro={s.hero.intro}
+        image={solutionImage(s.slug)}
         actions={[
           { label: "Request an assessment", href: `/contact?intent=assessment&solution=${s.slug}`, event: "service_cta_click" },
           { label: "Talk to an engineer", href: `/contact?intent=expert&solution=${s.slug}`, variant: "secondary", event: "service_cta_click" },

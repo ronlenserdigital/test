@@ -3,16 +3,20 @@ import { Icon } from "@/components/icons/icon";
 import { cn } from "@/lib/cn";
 import type { Article } from "@/content/types";
 import { formatDate } from "@/lib/format";
+import { Photo } from "./photo";
+import { categoryCardImage } from "@/lib/images";
 
 export function ArticleCard({ article, featured = false, headingLevel: H = "h3" }: { article: Article; featured?: boolean; headingLevel?: "h2" | "h3" }) {
   return (
     <Link
       href={`/resources/${article.slug}`}
       className={cn(
-        "group flex flex-col justify-between rounded-lg border border-line bg-surface-1 p-6 transition-colors duration-[var(--duration-base)] hover:border-accent md:p-7",
-        featured && "lg:p-9",
+        "group flex flex-col justify-between overflow-hidden rounded-lg border border-line bg-surface-1 transition-colors duration-[var(--duration-base)] hover:border-accent",
+        featured && "md:grid md:grid-cols-2",
       )}
     >
+      <Photo image={categoryCardImage(article.category)} ratio={featured ? "4/3" : "3/2"} sizes={featured ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"} className={cn("rounded-none border-0", featured && "md:h-full md:aspect-auto")} />
+      <div className={cn("flex flex-1 flex-col justify-between p-6 md:p-7", featured && "lg:p-9")}>
       <div>
         <p className="mono-label flex flex-wrap items-center gap-x-2">
           <span className="text-accent">{article.type.replace("-", " ")}</span>
@@ -26,6 +30,7 @@ export function ArticleCard({ article, featured = false, headingLevel: H = "h3" 
         <span>Reviewed {formatDate(article.reviewedAt)}</span>
         <Icon name="arrow-right" size={16} className="transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5" />
       </p>
+      </div>
     </Link>
   );
 }

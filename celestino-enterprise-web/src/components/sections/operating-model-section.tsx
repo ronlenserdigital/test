@@ -3,11 +3,14 @@ import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/heading";
 import { OperatingModel } from "./operating-model";
 import { LinkButton } from "@/components/ui/button";
+import { TextureBackdrop } from "@/components/ui/photo";
+import { getImage } from "@/lib/images";
 
 export function OperatingModelSection({ showLink = true }: { showLink?: boolean }) {
   return (
     <Section theme="dark" spacing="default" grid>
-      <Container>
+      <TextureBackdrop image={getImage("texture-data-center-corridor")} className="opacity-70" />
+      <Container className="relative">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <SectionHeading
             eyebrow="How the work is done"

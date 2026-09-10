@@ -5,6 +5,8 @@ import { SectionHeading } from "@/components/ui/heading";
 import { Icon } from "@/components/icons/icon";
 import { pillars, getServicesByPillar } from "@/content/services";
 import { cn } from "@/lib/cn";
+import { Photo } from "@/components/ui/photo";
+import { pillarImage } from "@/lib/images";
 
 /**
  * Five capability groups in an asymmetric layout: Protect and Operate are the
@@ -29,10 +31,12 @@ export function Capabilities() {
                 data-reveal
                 style={{ ["--reveal-delay" as string]: `${i * 60}ms` }}
                 className={cn(
-                  "flex flex-col rounded-lg border border-line bg-surface-1 p-6 md:p-7",
+                  "flex flex-col overflow-hidden rounded-lg border border-line bg-surface-1",
                   lead ? "md:col-span-3" : "md:col-span-2",
                 )}
               >
+                <Photo image={pillarImage(p.id)} ratio={lead ? "21/9" : "16/9"} sizes={lead ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 768px) 33vw, 100vw"} className="rounded-none border-0" />
+                <div className="flex flex-1 flex-col p-6 md:p-7">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs uppercase tracking-[0.14em] text-accent">{p.label}</span>
                   <span className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-surface-2 text-fg-2">
@@ -52,6 +56,7 @@ export function Capabilities() {
                     </li>
                   ))}
                 </ul>
+                </div>
               </article>
             );
           })}

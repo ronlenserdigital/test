@@ -4,6 +4,7 @@ import { IndustriesList } from "@/components/sections/industries-list";
 import { GovernmentBand } from "@/components/sections/government-band";
 import { CTASection } from "@/components/ui/cta-section";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -22,6 +23,7 @@ export default function IndustriesPage() {
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/industries", title, description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
       <PageHero
+        image={getImage("industry-professional-services")}
         crumbs={crumbs}
         eyebrow="Industries"
         title="The regulator decides the controls. The sector decides the recovery window."

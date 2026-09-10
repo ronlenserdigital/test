@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CTASection } from "@/components/ui/cta-section";
 import { trustSections } from "@/content/trust";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -26,6 +27,7 @@ export default function TrustPage() {
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/trust", title, description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
       <PageHero
+        image={getImage("texture-rack-detail")}
         crumbs={crumbs}
         eyebrow="Trust Center"
         title="How Celestino secures its own operations, and yours."

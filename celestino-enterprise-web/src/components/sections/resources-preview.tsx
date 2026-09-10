@@ -23,7 +23,7 @@ export function ResourcesPreview({ articles }: { articles: Article[] }) {
           </LinkButton>
         </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <ArticleCard article={lead} featured />
+          <ArticleCard article={lead} featured={false} />
           <ul className="flex flex-col divide-y divide-line border-y border-line">
             {rest.slice(0, 4).map((a) => (
               <li key={a.slug}>

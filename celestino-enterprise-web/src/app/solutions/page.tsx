@@ -10,6 +10,8 @@ import { CTASection } from "@/components/ui/cta-section";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
+import { solutionCardImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 
 const title = "Solutions by Outcome";
 const description =
@@ -39,7 +41,9 @@ export default function SolutionsPage() {
               const svc = s.serviceSlugs.map(getService).filter((x): x is NonNullable<typeof x> => Boolean(x));
               return (
                 <li key={s.slug} data-reveal style={{ ["--reveal-delay" as string]: `${(i % 2) * 60}ms` }}>
-                  <Link href={`/solutions/${s.slug}`} className="group flex h-full flex-col rounded-lg border border-line bg-surface-1 p-7 transition-colors duration-[var(--duration-base)] hover:border-accent">
+                  <Link href={`/solutions/${s.slug}`} className="group flex h-full flex-col overflow-hidden rounded-lg border border-line bg-surface-1 transition-colors duration-[var(--duration-base)] hover:border-accent">
+                    <Photo image={solutionCardImage(s.slug)} ratio="21/9" sizes="(min-width: 768px) 50vw, 100vw" className="rounded-none border-0" />
+                    <div className="flex flex-1 flex-col p-7">
                     <div className="flex items-center justify-between">
                       <span className="flex h-10 w-10 items-center justify-center rounded-md border border-line bg-surface-2 text-accent">
                         <Icon name={s.icon} size={20} />
@@ -55,6 +59,7 @@ export default function SolutionsPage() {
                         </span>
                       ))}
                     </p>
+                    </div>
                   </Link>
                 </li>
               );

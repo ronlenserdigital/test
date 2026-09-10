@@ -6,7 +6,7 @@ const FORBIDDEN = [/lorem ipsum/i, /in today's rapidly evolving/i, /whether you'
 test.describe("SEO and content quality on every indexable route", () => {
   const seenTitles = new Map<string, string>();
   for (const route of allRoutes) {
-    test(`${route}`, async ({ page, baseURL }, testInfo) => {
+    test(`${route}`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name === "mobile", "desktop only");
       const res = await page.goto(route);
       expect(res?.status(), `status for ${route}`).toBe(200);

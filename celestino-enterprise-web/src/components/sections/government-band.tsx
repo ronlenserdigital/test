@@ -4,7 +4,7 @@ import { LinkButton } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/heading";
 import { Icon } from "@/components/icons/icon";
 import { site } from "@/content/site";
-import { TextureBackdrop } from "@/components/ui/photo";
+import { TextureBackdrop, Photo } from "@/components/ui/photo";
 import { getImage } from "@/lib/images";
 
 export function GovernmentBand() {
@@ -36,6 +36,8 @@ export function GovernmentBand() {
             </LinkButton>
           </div>
         </div>
+        <div className="flex flex-col gap-4">
+        <Photo image={getImage("industry-government-public-sector")} ratio="21/9" sizes="(min-width: 1024px) 50vw, 100vw" />
         <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
           {rows.map((r) => (
             <div key={r.label} className="flex flex-col gap-1 bg-surface-1 p-4">
@@ -51,6 +53,7 @@ export function GovernmentBand() {
             </div>
           ))}
         </dl>
+        </div>
       </Container>
     </Section>
   );
