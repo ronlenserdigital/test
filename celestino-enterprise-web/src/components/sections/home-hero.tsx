@@ -58,7 +58,7 @@ export function HomeHero() {
 
         {photo ? (
           <div className="relative flex justify-end">
-            <Photo image={photo} ratio="4/5" priority sizes="(min-width: 1024px) 45vw, 100vw" className="max-h-[42rem] w-full max-w-[34rem] lg:aspect-[4/5]" />
+            <Photo image={photo} ratio="4/3" priority sizes="(min-width: 1024px) 45vw, 100vw" className="w-full max-w-[38rem]" />
           </div>
         ) : (
           <>
