@@ -4,6 +4,8 @@ import { LinkButton } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/heading";
 import { Icon } from "@/components/icons/icon";
 import { site } from "@/content/site";
+import { TextureBackdrop } from "@/components/ui/photo";
+import { getImage } from "@/lib/images";
 
 export function GovernmentBand() {
   const gov = site.government;
@@ -17,7 +19,8 @@ export function GovernmentBand() {
   ];
   return (
     <Section theme="dark" spacing="default" className="hairline-t">
-      <Container className="grid gap-10 lg:grid-cols-2 lg:items-center">
+      <TextureBackdrop image={getImage("texture-rack-detail")} />
+      <Container className="relative grid gap-10 lg:grid-cols-2 lg:items-center">
         <div className="flex flex-col gap-5">
           <Eyebrow>Government & public sector</Eyebrow>
           <h2 className="text-3xl">Structured for public-sector procurement.</h2>

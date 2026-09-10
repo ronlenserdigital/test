@@ -9,6 +9,7 @@ import { CTASection } from "@/components/ui/cta-section";
 import { RelatedLinks } from "@/components/sections/related-links";
 import { site } from "@/content/site";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -38,6 +39,7 @@ export default function AboutPage() {
         crumbs={crumbs}
         eyebrow="About"
         title="Engineers who run infrastructure, secure it, and build on it."
+        image={getImage("about-hero")}
         intro={`Celestino Enterprise is a technology services firm based in ${site.address.addressLocality}, Virginia. The team brings ${site.experienceYears.value} years of experience across infrastructure operations, cybersecurity and compliance support, and full-stack software engineering, delivered to organizations across the United States.`}
       />
       <Section theme="light" spacing="default">

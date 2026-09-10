@@ -15,6 +15,7 @@ import { getArticle } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, faqJsonLd, graph, serviceJsonLd, webPageJsonLd } from "@/lib/seo/json-ld";
+import { serviceImage } from "@/lib/images";
 
 type Params = { slug: string };
 
@@ -60,6 +61,7 @@ export default async function ServicePage({ params }: { params: Promise<Params> 
         eyebrow={`${pillar?.label ?? "Service"} · ${service.hero.eyebrow}`}
         title={service.hero.headline}
         intro={service.hero.intro}
+        image={serviceImage(service.slug)}
         actions={[
           { label: "Request an assessment", href: `/contact?intent=assessment&service=${service.slug}`, event: "service_cta_click" },
           { label: "Talk to an engineer", href: `/contact?intent=expert&service=${service.slug}`, variant: "secondary", event: "service_cta_click" },

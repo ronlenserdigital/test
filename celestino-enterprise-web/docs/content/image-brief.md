@@ -21,7 +21,7 @@ Hooded hackers, masks, skulls, padlocks, shields, binary or matrix rain, glowing
 
 OUTPUT SPECS
 - Deliver each image at the listed aspect ratio and at least 2400 px on the long edge, JPEG quality 90, sRGB.
-- Name files exactly as listed. Also provide a 3:2 crop of each hero for card use when a card name is listed.
+- Name files exactly as listed. No separate card crops are needed; the site crops the 16:9 master for cards.
 - After generating, self-check every image against the STYLE SYSTEM and HARD BANS and regenerate any that fail.
 
 IMAGE LIST
@@ -59,13 +59,13 @@ Compliance review in a conference room: printed control matrices and a bound pol
 11  service-software-development.jpg  (16:9) + card 3:2
 Developer workstation with an ultrawide monitor showing soft-focus code and an architecture diagram, a second screen with a mobile app simulator, a notebook of sketches. Person from behind. Warm desk lamp against a cool room.
 
-12  service-web-ecommerce.jpg  (16:9) + card 3:2
+12  service-web-application-engineering.jpg  (16:9) + card 3:2
 Designer and developer reviewing a responsive storefront on a phone, tablet and monitor at once (screens soft-focus, no readable brand), sticky notes on the desk edge. Overhead-angle composition.
 
 13  service-ai-automation.jpg  (16:9) + card 3:2
 An engineer reviewing an automation flow on a monitor, nodes connected by lines in blue, a second screen with a soft-focus chat interface. A printed process map on the desk with handwritten annotations. No robots, no glowing brains.
 
-14  industry-government.jpg  (16:9) + card 3:2
+14  industry-government-public-sector.jpg  (16:9) + card 3:2
 Exterior of a Virginia county government building: red brick, white columns, mature trees, a flagpole with the flag out of focus, overcast light. No signage readable. Text space on the left.
 
 15  industry-healthcare.jpg  (16:9) + card 3:2
@@ -121,3 +121,7 @@ A neutral, reusable image for future case studies: an empty conference room at d
 ## Alt-text rule when wiring
 
 Informational images get a one-sentence description of what is shown. Textures and backgrounds get `alt=""`.
+
+## Upload path
+
+Drop finished files into `celestino-enterprise-web/public/images/` in the GitHub repo (branch `claude/celestino-enterprise-rebuild-3obrp3`) using the exact filenames. The site detects each file at build time; anything missing simply does not render.

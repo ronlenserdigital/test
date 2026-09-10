@@ -17,6 +17,7 @@ import { publishedCaseStudies } from "@/content/case-studies";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, faqJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
+import { industryImage } from "@/lib/images";
 
 type Params = { slug: string };
 
@@ -53,6 +54,7 @@ export default async function IndustryPage({ params }: { params: Promise<Params>
         eyebrow={`Industry · ${ind.hero.eyebrow}`}
         title={ind.hero.headline}
         intro={ind.hero.intro}
+        image={industryImage(ind.slug)}
         actions={[
           { label: "Request an assessment", href: `/contact?intent=assessment&industry=${ind.slug}`, event: "service_cta_click" },
           { label: "Talk to an engineer", href: `/contact?intent=expert&industry=${ind.slug}`, variant: "secondary", event: "service_cta_click" },

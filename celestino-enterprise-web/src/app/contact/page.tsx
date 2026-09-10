@@ -7,6 +7,7 @@ import { ContactForm } from "@/components/forms/contact-form";
 import { CONTACT_INTENTS, type ContactIntent } from "@/lib/validation/contact";
 import { site, hasVerifiedEmail, hasVerifiedPhone } from "@/content/site";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 import Link from "next/link";
@@ -37,7 +38,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/contact", title, description, type: "ContactPage" }), breadcrumbJsonLd(crumbs))} />
-      <PageHero crumbs={crumbs} eyebrow="Contact" title="Talk to an engineer, not a sales queue." intro="Every inquiry is read by someone who does the work. Tell us what you run and what is at stake, and we will tell you what we would do first." grid={false} />
+      <PageHero crumbs={crumbs} eyebrow="Contact" title="Talk to an engineer, not a sales queue." intro="Every inquiry is read by someone who does the work. Tell us what you run and what is at stake, and we will tell you what we would do first." grid={false} image={getImage("contact-hero")} />
       <Section theme="light" spacing="default">
         <Container className="grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <div className="rounded-lg border border-line bg-surface-1 p-6 md:p-8">

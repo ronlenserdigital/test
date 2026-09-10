@@ -9,6 +9,7 @@ import { RelatedLinks } from "@/components/sections/related-links";
 import { FAQSection } from "@/components/sections/faq-section";
 import { site } from "@/content/site";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, faqJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -41,6 +42,7 @@ export default function NationwideSupportPage() {
         crumbs={crumbs}
         eyebrow="Nationwide support"
         title="Remote-first operations. Onsite when it matters."
+        image={getImage("nationwide-support-hero")}
         intro={`From ${site.address.addressLocality}, Virginia, Celestino runs client environments across the United States. Most issues are resolved remotely within the ticket; when a person is needed on site, emergency onsite support is available nationwide.`}
       />
       <Section theme="light" spacing="default">

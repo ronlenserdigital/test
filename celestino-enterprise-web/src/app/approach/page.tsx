@@ -8,6 +8,7 @@ import { STAGES } from "@/components/sections/operating-model-data";
 import { CTASection } from "@/components/ui/cta-section";
 import { RelatedLinks } from "@/components/sections/related-links";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -29,6 +30,7 @@ export default function ApproachPage() {
         crumbs={crumbs}
         eyebrow="Our approach"
         title="Six stages. Defined outputs. Evidence at every step."
+        image={getImage("approach-hero")}
         intro="Managed environments, security programs and application projects all move through the same cycle. The stages are not a sales diagram; they are how work is scheduled, reported and reviewed."
       />
       <Section theme="dark" spacing="default" grid>

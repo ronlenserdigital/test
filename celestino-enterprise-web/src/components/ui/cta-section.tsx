@@ -2,6 +2,8 @@ import { Section } from "./section";
 import { Container } from "./container";
 import { LinkButton } from "./button";
 import { primaryCta, secondaryCta } from "@/content/navigation";
+import { TextureBackdrop } from "./photo";
+import { getImage } from "@/lib/images";
 
 interface CTASectionProps {
   title?: string;
@@ -20,7 +22,8 @@ export function CTASection({
 }: CTASectionProps) {
   return (
     <Section theme="dark" spacing="default" className="hairline-t">
-      <Container className="flex flex-col items-start gap-8 md:flex-row md:items-end md:justify-between">
+      <TextureBackdrop image={getImage("texture-fiber")} />
+      <Container className="relative flex flex-col items-start gap-8 md:flex-row md:items-end md:justify-between">
         <div className="flex max-w-[52ch] flex-col gap-4">
           <h2 className="text-3xl">{title}</h2>
           <p className="text-md text-fg-2">{lede}</p>

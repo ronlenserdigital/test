@@ -10,6 +10,8 @@ import { CTASection } from "@/components/ui/cta-section";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
+import { serviceImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 
 const title = "IT & Cybersecurity Services";
 const description =
@@ -54,6 +56,7 @@ export default function ServicesPage() {
                   {services.map((s) => (
                     <li key={s.slug}>
                       <Link href={`/services/${s.slug}`} className="group flex h-full flex-col rounded-lg border border-line bg-surface-1 p-6 transition-colors duration-[var(--duration-base)] hover:border-accent">
+                        <Photo image={serviceImage(s.slug)} ratio="3/2" sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="mb-5 rounded-md border-0" />
                         <span className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-surface-2 text-accent">
                           <Icon name={s.icon} size={18} />
                         </span>
