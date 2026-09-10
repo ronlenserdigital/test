@@ -17,7 +17,7 @@ import { formatDate } from "@/lib/format";
 import { inlineMarkdown } from "@/lib/inline-markdown";
 import { JsonLd } from "@/components/seo/json-ld";
 import { articleJsonLd, breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
-import { categoryImage } from "@/lib/images";
+import { articleImage } from "@/lib/images";
 import { Photo } from "@/components/ui/photo";
 
 type Params = { slug: string };
@@ -89,7 +89,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
               </dl>
             </header>
 
-            <Photo image={categoryImage(a.category)} ratio="21/9" priority sizes="(min-width: 1024px) 60vw, 100vw" className="mt-8 max-w-[68ch]" />
+            <Photo image={articleImage(a.slug, a.category, a.title)} ratio="21/9" priority sizes="(min-width: 1024px) 60vw, 100vw" className="mt-8 max-w-[68ch]" />
 
             <div className="mt-8 max-w-[68ch] rounded-lg border border-accent/30 bg-accent-soft p-6">
               <p className="mono-label mb-2 text-accent">Short answer</p>
@@ -219,7 +219,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
         </Section>
       ) : null}
       <RelatedLinks groups={[{ heading: "Related services", links: services.map((s) => ({ label: s.name, href: `/services/${s.slug}`, icon: s.icon })) }]} theme="dark" />
-      <CTASection eventPrefix="service" />
+      <CTASection texture="cable" eventPrefix="service" />
     </>
   );
 }

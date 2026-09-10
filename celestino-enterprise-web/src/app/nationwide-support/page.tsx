@@ -10,6 +10,7 @@ import { FAQSection } from "@/components/sections/faq-section";
 import { site } from "@/content/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getImage } from "@/lib/images";
+import { Photo, TextureBackdrop } from "@/components/ui/photo";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, faqJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -47,7 +48,10 @@ export default function NationwideSupportPage() {
       />
       <Section theme="light" spacing="default">
         <Container>
-          <SectionHeading eyebrow="Coverage model" title="Three tiers of coverage, one service agreement." />
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            <SectionHeading eyebrow="Coverage model" title="Three tiers of coverage, one service agreement." />
+            <Photo image={getImage("nationwide-regional")} ratio="16/9" sizes="(min-width: 1024px) 45vw, 100vw" />
+          </div>
           <ol className="mt-10 grid gap-4 md:grid-cols-3">
             {tiers.map((t, i) => (
               <li key={t.title} className="flex flex-col gap-3 rounded-lg border border-line bg-surface-1 p-6" data-reveal style={{ ["--reveal-delay" as string]: `${i * 60}ms` }}>
@@ -62,7 +66,12 @@ export default function NationwideSupportPage() {
           </p>
         </Container>
       </Section>
-      <FAQSection faqs={faqs} theme="dark" />
+      <Section theme="dark" spacing="none" className="relative">
+        <TextureBackdrop image={getImage("nationwide-backdrop")} className="opacity-80" />
+        <div className="relative">
+          <FAQSection faqs={faqs} theme="dark" />
+        </div>
+      </Section>
       <RelatedLinks groups={[{ heading: "Services delivered nationwide", links: [{ label: "Managed IT Services", href: "/services/managed-it", icon: "server" }, { label: "Co-Managed IT", href: "/services/co-managed-it", icon: "users" }, { label: "Network Management", href: "/services/network-management", icon: "network" }] }, { heading: "Company", links: [{ label: "About", href: "/about", icon: "flag" }, { label: "Our approach", href: "/approach", icon: "compass" }, { label: "Contact", href: "/contact", icon: "mail" }] }]} />
       <CTASection />
     </>

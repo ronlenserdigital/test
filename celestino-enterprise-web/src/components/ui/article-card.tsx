@@ -4,9 +4,9 @@ import { cn } from "@/lib/cn";
 import type { Article } from "@/content/types";
 import { formatDate } from "@/lib/format";
 import { Photo } from "./photo";
-import { categoryCardImage } from "@/lib/images";
+import { articleCardImage, type SiteImage } from "@/lib/images";
 
-export function ArticleCard({ article, featured = false, headingLevel: H = "h3" }: { article: Article; featured?: boolean; headingLevel?: "h2" | "h3" }) {
+export function ArticleCard({ article, featured = false, headingLevel: H = "h3", image }: { article: Article; featured?: boolean; headingLevel?: "h2" | "h3"; image?: SiteImage | null }) {
   return (
     <Link
       href={`/resources/${article.slug}`}
@@ -15,7 +15,7 @@ export function ArticleCard({ article, featured = false, headingLevel: H = "h3" 
         featured && "md:grid md:grid-cols-2",
       )}
     >
-      <Photo image={categoryCardImage(article.category)} ratio={featured ? "4/3" : "3/2"} sizes={featured ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"} className={cn("rounded-none border-0", featured && "md:h-full md:aspect-auto")} />
+      <Photo image={image ?? articleCardImage(article.slug, article.category, article.title)} ratio={featured ? "4/3" : "3/2"} sizes={featured ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"} className={cn("rounded-none border-0", featured && "md:h-full md:aspect-auto")} />
       <div className={cn("flex flex-1 flex-col justify-between p-6 md:p-7", featured && "lg:p-9")}>
       <div>
         <p className="mono-label flex flex-wrap items-center gap-x-2">

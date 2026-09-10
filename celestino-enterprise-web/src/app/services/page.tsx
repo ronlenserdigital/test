@@ -11,7 +11,7 @@ import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 import { serviceCardImage } from "@/lib/images";
-import { getImage as getSiteImage } from "@/lib/images";
+import { firstImage } from "@/lib/images";
 import { Photo } from "@/components/ui/photo";
 
 const title = "IT & Cybersecurity Services";
@@ -30,7 +30,7 @@ export default function ServicesPage() {
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/services", title, description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
       <PageHero
-        image={getSiteImage("service-network-management")}
+        image={firstImage("services-hub-hero", "service-network-management")}
         crumbs={crumbs}
         eyebrow="Services"
         title="Ten services. Five capability groups. One team accountable for all of it."

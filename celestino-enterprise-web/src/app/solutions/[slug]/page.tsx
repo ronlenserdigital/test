@@ -104,7 +104,7 @@ export default async function SolutionPage({ params }: { params: Promise<Params>
           { heading: "More solutions", links: solutions.filter((x) => x.slug !== s.slug).slice(0, 4).map((x) => ({ label: x.name, href: `/solutions/${x.slug}`, icon: x.icon })) },
         ]}
       />
-      <CTASection />
+      <CTASection texture="rack" />
     </>
   );
 }

@@ -10,7 +10,7 @@ import { CTASection } from "@/components/ui/cta-section";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
-import { solutionCardImage } from "@/lib/images";
+import { solutionCardImage, getImage } from "@/lib/images";
 import { Photo } from "@/components/ui/photo";
 
 const title = "Solutions by Outcome";
@@ -33,6 +33,7 @@ export default function SolutionsPage() {
         eyebrow="Solutions"
         title="Start from the outcome. The services follow."
         intro="Buyers rarely shop for a service; they have a problem with a deadline. Each solution combines the services that solve it, in the order that works."
+        image={getImage("solutions-hub-hero")}
       />
       <Section theme="light" spacing="default">
         <Container>
@@ -67,7 +68,7 @@ export default function SolutionsPage() {
           </ul>
         </Container>
       </Section>
-      <CTASection />
+      <CTASection texture="rack" />
     </>
   );
 }

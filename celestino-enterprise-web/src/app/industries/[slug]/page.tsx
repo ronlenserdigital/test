@@ -17,7 +17,8 @@ import { publishedCaseStudies } from "@/content/case-studies";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, faqJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
-import { industryImage } from "@/lib/images";
+import { industryImage, industryDetailImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 
 type Params = { slug: string };
 
@@ -76,7 +77,10 @@ export default async function IndustryPage({ params }: { params: Promise<Params>
 
       <Section theme="light" spacing="default">
         <Container>
-          <SectionHeading eyebrow="Sector challenges" title={`Where ${ind.name.toLowerCase()} organizations carry operational risk`} />
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+            <SectionHeading eyebrow="Sector challenges" title={`Where ${ind.name.toLowerCase()} organizations carry operational risk`} />
+            <Photo image={industryDetailImage(ind.slug)} ratio="16/9" sizes="(min-width: 1024px) 45vw, 100vw" />
+          </div>
           <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ind.challenges.map((c, i) => (
               <li key={c.title} className="flex flex-col gap-2 rounded-lg border border-line bg-surface-1 p-6" data-reveal style={{ ["--reveal-delay" as string]: `${(i % 3) * 60}ms` }}>
@@ -154,7 +158,7 @@ export default async function IndustryPage({ params }: { params: Promise<Params>
             : { heading: "Trust", links: [{ label: "Trust Center", href: "/trust", icon: "shield-check" as const }, { label: "Data handling", href: "/trust/data-handling", icon: "lock" as const }] },
         ]}
       />
-      <CTASection />
+      <CTASection texture="rack" />
     </>
   );
 }

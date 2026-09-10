@@ -4,7 +4,9 @@ import { TrustLayer } from "@/components/sections/trust-layer";
 import { PhotoMosaic } from "@/components/sections/photo-mosaic";
 import { Capabilities } from "@/components/sections/capabilities";
 import { OperatingModelSection } from "@/components/sections/operating-model-section";
-import { IndustriesList } from "@/components/sections/industries-list";
+import { HomeIndustryStrip } from "@/components/sections/home-industry-strip";
+import { LayersSection } from "@/components/sections/layers-section";
+import { getImage } from "@/lib/images";
 import { GovernmentBand } from "@/components/sections/government-band";
 import { ResourcesPreview } from "@/components/sections/resources-preview";
 import { CTASection } from "@/components/ui/cta-section";
@@ -34,9 +36,10 @@ export default function HomePage() {
       <HomeHero />
       <TrustLayer />
       <PhotoMosaic />
+      {getImage("home-hero") ? <LayersSection /> : null}
       <Capabilities />
       <OperatingModelSection />
-      <IndustriesList />
+      <HomeIndustryStrip />
       <GovernmentBand />
       <ResourcesPreview articles={featured} />
       <CTASection eventPrefix="service" />

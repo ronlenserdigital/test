@@ -4,6 +4,8 @@ import { Section } from "@/components/ui/section";
 import { Container } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
 import { Icon } from "@/components/icons/icon";
+import { TextureBackdrop } from "@/components/ui/photo";
+import { getImage } from "@/lib/images";
 
 export const metadata: Metadata = {
   title: "Page not found",
@@ -19,7 +21,8 @@ export default function NotFound() {
   ];
   return (
     <Section theme="dark" grid className="flex min-h-[60vh] items-center">
-      <Container className="grid gap-12 lg:grid-cols-2 lg:items-center">
+      <TextureBackdrop image={getImage("not-found")} />
+      <Container className="relative grid gap-12 lg:grid-cols-2 lg:items-center">
         <div className="flex flex-col gap-5">
           <p className="eyebrow">404 · Not found</p>
           <h1 className="text-4xl">That page does not exist at this address.</h1>

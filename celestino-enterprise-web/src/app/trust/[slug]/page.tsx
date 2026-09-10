@@ -12,6 +12,7 @@ import { site } from "@/content/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
+import { trustSectionImage } from "@/lib/images";
 
 type Params = { slug: string };
 
@@ -41,7 +42,7 @@ export default async function TrustSectionPage({ params }: { params: Promise<Par
   return (
     <>
       <JsonLd data={graph(webPageJsonLd({ path: `/trust/${s.slug}`, title: `${s.title} | Trust Center`, description: s.summary }), breadcrumbJsonLd(crumbs))} />
-      <PageHero crumbs={crumbs} eyebrow="Trust Center" title={s.title} intro={s.summary} grid={false} />
+      <PageHero crumbs={crumbs} eyebrow="Trust Center" title={s.title} intro={s.summary} grid={false} image={trustSectionImage(s.slug)} />
       <Section theme="light" spacing="default">
         <Container className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <article className="max-w-[68ch]">

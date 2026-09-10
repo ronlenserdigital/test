@@ -15,7 +15,8 @@ import { getArticle } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, faqJsonLd, graph, serviceJsonLd, webPageJsonLd } from "@/lib/seo/json-ld";
-import { serviceImage } from "@/lib/images";
+import { serviceImage, serviceDetailImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 
 type Params = { slug: string };
 
@@ -112,7 +113,9 @@ export default async function ServicePage({ params }: { params: Promise<Params> 
               ))}
             </ol>
           </div>
-          <div>
+          <div className="flex flex-col gap-8">
+            <Photo image={serviceDetailImage(service.slug)} ratio="16/9" sizes="(min-width: 1024px) 45vw, 100vw" />
+            <div>
             <SectionHeading eyebrow="Outcomes" title="What changes for your organization." />
             <ul className="mt-10 flex flex-col divide-y divide-line border-y border-line">
               {service.outcomes.map((o) => (
@@ -122,6 +125,7 @@ export default async function ServicePage({ params }: { params: Promise<Params> 
                 </li>
               ))}
             </ul>
+            </div>
           </div>
         </Container>
       </Section>

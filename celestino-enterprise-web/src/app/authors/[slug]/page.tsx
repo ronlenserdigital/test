@@ -9,6 +9,7 @@ import { articles } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, personJsonLd, webPageJsonLd } from "@/lib/seo/json-ld";
+import { getImage } from "@/lib/images";
 
 type Params = { slug: string };
 
@@ -37,7 +38,7 @@ export default async function AuthorPage({ params }: { params: Promise<Params> }
   return (
     <>
       <JsonLd data={graph(webPageJsonLd({ path: `/authors/${a.slug}`, title: `${a.name} | Author`, description: a.bio, type: "ProfilePage" }), breadcrumbJsonLd(crumbs), personJsonLd(a))} />
-      <PageHero crumbs={crumbs} eyebrow="Author" title={a.name} intro={a.bio} grid={false} />
+      <PageHero crumbs={crumbs} eyebrow="Author" title={a.name} intro={a.bio} grid={false} image={getImage("author-team")} />
       <Section theme="light" spacing="default">
         <Container>
           <p className="mono-label mb-6">{list.length} articles</p>

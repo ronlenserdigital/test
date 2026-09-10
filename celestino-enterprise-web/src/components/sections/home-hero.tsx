@@ -5,8 +5,11 @@ import { HeroVisual, HeroVisualCompact } from "./hero-visual";
 import { primaryCta, secondaryCta } from "@/content/navigation";
 import { site } from "@/content/site";
 import { Icon } from "@/components/icons/icon";
+import { Photo } from "@/components/ui/photo";
+import { getImage } from "@/lib/images";
 
 export function HomeHero() {
+  const photo = getImage("home-hero");
   return (
     <Section theme="dark" spacing="none" grid className="overflow-hidden hairline-b">
       <Container width="wide" className="grid items-center gap-12 pb-16 pt-14 md:pt-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-8 lg:pb-24 lg:pt-24">
@@ -53,12 +56,20 @@ export function HomeHero() {
           </ul>
         </div>
 
-        <div className="relative hidden justify-end lg:flex">
-          <HeroVisual className="w-full" />
-        </div>
-        <div className="lg:hidden">
-          <HeroVisualCompact className="mx-auto w-full max-w-md" />
-        </div>
+        {photo ? (
+          <div className="relative flex justify-end">
+            <Photo image={photo} ratio="4/5" priority sizes="(min-width: 1024px) 45vw, 100vw" className="max-h-[42rem] w-full max-w-[34rem] lg:aspect-[4/5]" />
+          </div>
+        ) : (
+          <>
+            <div className="relative hidden justify-end lg:flex">
+              <HeroVisual className="w-full" />
+            </div>
+            <div className="lg:hidden">
+              <HeroVisualCompact className="mx-auto w-full max-w-md" />
+            </div>
+          </>
+        )}
       </Container>
     </Section>
   );

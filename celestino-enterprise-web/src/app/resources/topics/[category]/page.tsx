@@ -10,6 +10,7 @@ import { articleCategories, getArticlesByCategory } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
+import { topicImage } from "@/lib/images";
 
 type Params = { category: string };
 
@@ -40,7 +41,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   return (
     <>
       <JsonLd data={graph(webPageJsonLd({ path: `/resources/topics/${c.slug}`, title: `${c.label} Resources`, description: c.description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
-      <PageHero crumbs={crumbs} eyebrow="Topic" title={c.label} intro={c.description} />
+      <PageHero crumbs={crumbs} eyebrow="Topic" title={c.label} intro={c.description} image={topicImage(c.slug)} />
       <Section theme="light" spacing="default">
         <Container>
           <nav aria-label="Topics" className="mb-10 flex flex-wrap gap-2">
@@ -57,7 +58,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
           </div>
         </Container>
       </Section>
-      <CTASection />
+      <CTASection texture="cable" />
     </>
   );
 }

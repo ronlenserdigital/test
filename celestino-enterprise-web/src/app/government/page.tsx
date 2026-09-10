@@ -12,7 +12,7 @@ import { site } from "@/content/site";
 import { getService } from "@/content/services";
 import { getArticle } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
-import { getImage } from "@/lib/images";
+import { firstImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -56,7 +56,7 @@ export default function GovernmentPage() {
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/government", title, description }), breadcrumbJsonLd(crumbs))} />
       <PageHero
-        image={getImage("industry-government-public-sector")}
+        image={firstImage("government-hero", "industry-government-public-sector")}
         crumbs={crumbs}
         eyebrow="Government & public sector"
         title="Capabilities, identifiers and frameworks on one page."
@@ -165,7 +165,7 @@ export default function GovernmentPage() {
       </Section>
 
       <RelatedLinks groups={[{ heading: "Public-sector guidance", links: articles.map((a) => ({ label: a.title, href: `/resources/${a.slug}`, description: `${a.readingMinutes} min read` })) }, { heading: "Trust", links: [{ label: "Trust Center", href: "/trust", icon: "shield-check" }, { label: "Security practices", href: "/trust/security-practices", icon: "lock" }, { label: "Data handling", href: "/trust/data-handling", icon: "database" }] }]} />
-      <CTASection title="Qualify Celestino for your next requirement." lede="Send the requirement, the framework it must satisfy and the timeline. An engineer responds with a capability summary and any identifiers you need." primary={{ label: "Contact for public-sector work", href: "/contact?intent=government" }} secondary={{ label: "Public-sector industry page", href: "/industries/government-public-sector" }} />
+      <CTASection texture="rack" title="Qualify Celestino for your next requirement." lede="Send the requirement, the framework it must satisfy and the timeline. An engineer responds with a capability summary and any identifiers you need." primary={{ label: "Contact for public-sector work", href: "/contact?intent=government" }} secondary={{ label: "Public-sector industry page", href: "/industries/government-public-sector" }} />
     </>
   );
 }

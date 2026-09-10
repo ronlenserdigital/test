@@ -9,6 +9,7 @@ import { CTASection } from "@/components/ui/cta-section";
 import { RelatedLinks } from "@/components/sections/related-links";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -40,7 +41,10 @@ export default function ApproachPage() {
       </Section>
       <Section theme="light" spacing="default" className="hairline-t">
         <Container>
-          <SectionHeading eyebrow="Stage reference" title="Every stage, in full" lede="The interactive model above is summarized here in plain text so nothing depends on interaction." />
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            <SectionHeading eyebrow="Stage reference" title="Every stage, in full" lede="The interactive model above is summarized here in plain text so nothing depends on interaction." />
+            <Photo image={getImage("approach-review")} ratio="16/9" sizes="(min-width: 1024px) 45vw, 100vw" />
+          </div>
           <div className="mt-10 overflow-x-auto rounded-lg border border-line">
             <table className="w-full min-w-[760px] border-collapse text-sm">
               <thead>

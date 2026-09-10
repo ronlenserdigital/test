@@ -10,6 +10,7 @@ import { RelatedLinks } from "@/components/sections/related-links";
 import { site } from "@/content/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getImage } from "@/lib/images";
+import { Photo } from "@/components/ui/photo";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -44,7 +45,10 @@ export default function AboutPage() {
       />
       <Section theme="light" spacing="default">
         <Container className="grid gap-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <SectionHeading eyebrow="What we stand behind" title="Four commitments that shape every engagement." />
+          <div className="flex flex-col gap-8">
+            <SectionHeading eyebrow="What we stand behind" title="Four commitments that shape every engagement." />
+            <Photo image={getImage("about-principles")} ratio="4/3" sizes="(min-width: 1024px) 35vw, 100vw" />
+          </div>
           <ul className="grid gap-4 sm:grid-cols-2">
             {principles.map((p) => (
               <li key={p.title} className="flex flex-col gap-3 rounded-lg border border-line bg-surface-1 p-6">
@@ -60,6 +64,7 @@ export default function AboutPage() {
         <Container className="grid gap-12 lg:grid-cols-2">
           <div>
             <SectionHeading eyebrow="Company facts" title="What is verified, and what is on request." lede="Facts published here are limited to what Celestino has confirmed in writing. This is deliberate for a firm that sells trust." />
+            <Photo image={getImage("about-facts")} ratio="16/9" className="mt-8" sizes="(min-width: 1024px) 45vw, 100vw" />
           </div>
           <dl className="divide-y divide-line rounded-lg border border-line bg-surface-1">
             {[

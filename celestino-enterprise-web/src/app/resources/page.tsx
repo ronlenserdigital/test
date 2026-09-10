@@ -8,7 +8,7 @@ import { ArticleCard } from "@/components/ui/article-card";
 import { CTASection } from "@/components/ui/cta-section";
 import { articles, articleCategories } from "@/content/articles";
 import { buildMetadata } from "@/lib/seo/metadata";
-import { getImage } from "@/lib/images";
+import { firstImage } from "@/lib/images";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
 
@@ -29,7 +29,7 @@ export default function ResourcesPage() {
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/resources", title, description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
       <PageHero
-        image={getImage("service-security-risk-advisory")}
+        image={firstImage("resources-hub-hero", "service-security-risk-advisory")}
         crumbs={crumbs}
         eyebrow="Resources"
         title="Written by the engineers who do the work."
@@ -62,7 +62,7 @@ export default function ResourcesPage() {
           </Link>
         </Container>
       </Section>
-      <CTASection />
+      <CTASection texture="cable" />
     </>
   );
 }

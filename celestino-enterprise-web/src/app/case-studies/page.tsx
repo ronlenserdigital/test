@@ -11,7 +11,7 @@ import { getIndustry } from "@/content/industries";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd, graph, webPageJsonLd } from "@/lib/seo/json-ld";
-import { getImage } from "@/lib/images";
+import { firstImage, getImage } from "@/lib/images";
 import { Photo } from "@/components/ui/photo";
 
 const title = "Case Studies";
@@ -35,7 +35,7 @@ export default function CaseStudiesPage() {
   return (
     <>
       <JsonLd data={graph(webPageJsonLd({ path: "/case-studies", title, description, type: "CollectionPage" }), breadcrumbJsonLd(crumbs))} />
-      <PageHero image={getImage("case-study-placeholder")}
+      <PageHero image={firstImage("case-studies-hero")}
         crumbs={crumbs} eyebrow="Case studies" title="Engagements, documented to a standard." intro="A case study on this site is a record the client has read and approved. If that sounds slower than the usual marketing page, it is. It is also the only kind worth citing in a procurement response." />
       <Section theme="light" spacing="default">
         <Container>

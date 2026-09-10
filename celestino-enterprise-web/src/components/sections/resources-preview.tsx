@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/ui/heading";
 import { LinkButton } from "@/components/ui/button";
 import { ArticleCard } from "@/components/ui/article-card";
 import type { Article } from "@/content/types";
+import { getImage } from "@/lib/images";
 
 export function ResourcesPreview({ articles }: { articles: Article[] }) {
   if (!articles.length) return null;
@@ -23,7 +24,7 @@ export function ResourcesPreview({ articles }: { articles: Article[] }) {
           </LinkButton>
         </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <ArticleCard article={lead} featured={false} />
+          <ArticleCard article={lead} featured={false} image={getImage("home-resources-feature")} />
           <ul className="flex flex-col divide-y divide-line border-y border-line">
             {rest.slice(0, 4).map((a) => (
               <li key={a.slug}>

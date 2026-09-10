@@ -1,7 +1,7 @@
 import { Section } from "@/components/ui/section";
 import { Container } from "@/components/ui/container";
 import { Photo } from "@/components/ui/photo";
-import { getImage, getCardImage } from "@/lib/images";
+import { firstImage, getImage, getCardImage } from "@/lib/images";
 
 /**
  * Three-up photo band: what the work looks like. Renders only when at least
@@ -9,9 +9,9 @@ import { getImage, getCardImage } from "@/lib/images";
  */
 export function PhotoMosaic() {
   const tiles = [
-    { image: getImage("nationwide-support-hero"), label: "Onsite anywhere in the US", detail: "Remote-first operations with field response for the work that needs hands on a rack." },
-    { image: getCardImage("service-network-management"), label: "Documented to a standard", detail: "Labeled cabling, current diagrams and configuration under version control." },
-    { image: getImage("approach-hero"), label: "Evidence at every stage", detail: "Assessment reports, runbooks and review minutes an auditor can read." },
+    { image: firstImage("home-tile-onsite", "nationwide-support-hero"), label: "Onsite anywhere in the US", detail: "Remote-first operations with field response for the work that needs hands on a rack." },
+    { image: getImage("home-tile-standards") ?? getCardImage("service-network-management"), label: "Documented to a standard", detail: "Labeled cabling, current diagrams and configuration under version control." },
+    { image: firstImage("home-tile-evidence", "approach-hero"), label: "Evidence at every stage", detail: "Assessment reports, runbooks and review minutes an auditor can read." },
   ].filter((t) => t.image);
   if (!tiles.length) return null;
   return (

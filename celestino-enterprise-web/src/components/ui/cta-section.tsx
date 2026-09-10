@@ -3,7 +3,7 @@ import { Container } from "./container";
 import { LinkButton } from "./button";
 import { primaryCta, secondaryCta } from "@/content/navigation";
 import { TextureBackdrop } from "./photo";
-import { getImage } from "@/lib/images";
+import { ctaTexture, type CtaTexture } from "@/lib/images";
 
 interface CTASectionProps {
   title?: string;
@@ -11,6 +11,7 @@ interface CTASectionProps {
   primary?: { label: string; href: string };
   secondary?: { label: string; href: string };
   eventPrefix?: string;
+  texture?: CtaTexture;
 }
 
 export function CTASection({
@@ -19,10 +20,11 @@ export function CTASection({
   primary = primaryCta,
   secondary = secondaryCta,
   eventPrefix = "service",
+  texture = "fiber",
 }: CTASectionProps) {
   return (
     <Section theme="dark" spacing="default" className="hairline-t">
-      <TextureBackdrop image={getImage("texture-fiber")} />
+      <TextureBackdrop image={ctaTexture(texture)} />
       <Container className="relative flex flex-col items-start gap-8 md:flex-row md:items-end md:justify-between">
         <div className="flex max-w-[52ch] flex-col gap-4">
           <h2 className="text-3xl">{title}</h2>
