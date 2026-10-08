@@ -212,7 +212,9 @@ export class Repo {
 
   subscribe(fn: () => void) {
     this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
   }
   changed() {
     this.version++;
@@ -484,10 +486,13 @@ export class Repo {
       id,
     ]);
   }
-  async updateNoteMaterialText(id: Id, title: string, text: string) {
+  async updateNoteMaterialText(id: Id, title: string, sectionIdx: number, text: string) {
     await this.writeBatch([
-      { sql: "UPDATE materials SET title = ?, char_count = ?, updated_at = ? WHERE id = ?", params: [title, text.length, Date.now(), id] },
-      { sql: "UPDATE material_sections SET text = ? WHERE material_id = ? AND idx = 0", params: [text, id] },
+      { sql: "UPDATE material_sections SET text = ? WHERE material_id = ? AND idx = ?", params: [text, id, sectionIdx] },
+      {
+        sql: "UPDATE materials SET title = ?, char_count = (SELECT COALESCE(SUM(LENGTH(text)), 0) FROM material_sections WHERE material_id = ?), updated_at = ? WHERE id = ?",
+        params: [title, id, Date.now(), id],
+      },
     ]);
   }
   async savePosition(id: Id, pos: ReadingPosition) {

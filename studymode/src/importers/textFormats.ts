@@ -72,7 +72,7 @@ export function markdownToSections(md: string, fallbackTitle: string): SectionDr
       label = markdownInline(h[2]).trim() || label;
       continue;
     }
-    if (/^\s*([-*_])\s*\1\s*\1[\s\1]*$/.test(line)) {
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
       buf.push("");
       continue;
     }

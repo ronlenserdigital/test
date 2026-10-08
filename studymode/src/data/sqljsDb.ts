@@ -35,7 +35,7 @@ export class SqlJsDb implements Db {
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
       void this.flush();
-    }, 250);
+    }, 60);
   }
 
   async flush(): Promise<void> {

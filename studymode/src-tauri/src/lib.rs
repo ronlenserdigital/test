@@ -1,5 +1,6 @@
 mod ai;
 mod db;
+mod export;
 mod files;
 mod secrets;
 
@@ -27,6 +28,7 @@ fn app_info(app: tauri::AppHandle) -> Result<AppInfo, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
@@ -52,6 +54,7 @@ pub fn run() {
             secrets::secret_store_available,
             ai::ai_messages,
             ai::ai_cancel,
+            export::export_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running StudyMode");
