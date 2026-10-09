@@ -1,0 +1,14 @@
+[
+  {
+    "stem": "How many bits are in an IPv4 address?",
+    "type": "single",
+    "choices": [
+      { "text": "16", "correct": false, "explanation": "Too few." },
+      { "text": "32", "correct": true, "explanation": "IPv4 addresses are 32 bits." },
+      { "text": "128", "correct": false, "explanation": "That is IPv6." }
+    ],
+    "explanation": "IPv4 uses 32-bit addresses.",
+    "objective": "1.1",
+    "source": "My notes p.4"
+  }
+]

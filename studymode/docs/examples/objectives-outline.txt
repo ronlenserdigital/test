@@ -1,0 +1,5 @@
+1.0 Example Domain One (40%)
+1.1 First objective copied from your official exam guide
+1.2 Second objective copied from your official exam guide
+2.0 Example Domain Two (60%)
+2.1 Third objective copied from your official exam guide

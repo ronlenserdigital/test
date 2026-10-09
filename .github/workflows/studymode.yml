@@ -1,0 +1,76 @@
+name: StudyMode
+
+on:
+  push:
+    paths: ["studymode/**", ".github/workflows/studymode.yml"]
+  pull_request:
+    paths: ["studymode/**", ".github/workflows/studymode.yml"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: studymode
+
+jobs:
+  checks:
+    name: Typecheck, unit/integration and browser e2e tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: studymode/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: studymode/test-results
+
+  native:
+    name: Native build (${{ matrix.os }})
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: studymode/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: studymode/src-tauri
+      - name: Linux system dependencies
+        if: runner.os == 'Linux'
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: npm ci
+      - name: Rust unit tests
+        working-directory: studymode/src-tauri
+        run: cargo test
+      - name: Build and bundle (unsigned)
+        run: npx tauri build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studymode-${{ runner.os }}
+          path: |
+            studymode/src-tauri/target/release/bundle/msi/*.msi
+            studymode/src-tauri/target/release/bundle/nsis/*.exe
+            studymode/src-tauri/target/release/bundle/dmg/*.dmg
+            studymode/src-tauri/target/release/bundle/deb/*.deb
+            studymode/src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: warn

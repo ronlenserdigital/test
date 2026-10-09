@@ -105,7 +105,7 @@ export const CAPABILITIES: Capability[] = [
     cells: {
       windows: c("supported", "App-only CSS overlay."),
       macos: c("supported", "App-only CSS overlay."),
-      linux: c("supported", "App-only CSS overlay.", true),
+      linux: c("supported", "App-only CSS overlay. Verified in the Linux desktop build and in Chromium.", true),
       android: c("supported", "App-only CSS overlay."),
       ios: c("supported", "App-only CSS overlay."),
     },
@@ -134,7 +134,7 @@ export const CAPABILITIES: Capability[] = [
     cells: {
       windows: c("supported", "WebView2 exposes installed Windows voices. “Online”/“Natural” voices need a network connection."),
       macos: c("supported", "WKWebView exposes system voices."),
-      linux: c("supported", "Only if your WebKitGTK build includes speech synthesis (2.44+ with Flite or libspiel). StudyMode detects a missing engine and explains it."),
+      linux: c("unavailable", "Verified unavailable with Ubuntu 24.04's WebKitGTK 2.52 (built without speech synthesis). Other distributions' builds may include it; StudyMode detects the engine and explains when it is missing.", true),
       android: c("supported", "Android WebView speech support varies by device; unverified."),
       ios: c("supported", "WKWebView speech synthesis; unverified."),
     },

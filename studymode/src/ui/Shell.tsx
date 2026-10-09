@@ -479,7 +479,7 @@ export function Shell() {
         </div>
         {NAV.map(navBtn)}
         <div className="nav-sep" />
-        <div className="nav-secondary" style={{ display: "contents" }}>
+        <div className="nav-secondary">
           {NAV2.map(navBtn)}
         </div>
       </nav>

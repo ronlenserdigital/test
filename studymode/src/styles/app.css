@@ -282,10 +282,21 @@ textarea {
   border-radius: 999px;
   padding: 0 8px;
 }
+.nav-secondary {
+  display: contents;
+}
+.reader-side .tabs button {
+  padding: 8px 8px;
+}
 .nav-sep {
   height: 1px;
   background: var(--border);
   margin: var(--space-3) var(--space-2);
+}
+main:focus,
+main:focus-visible {
+  box-shadow: none;
+  outline: none;
 }
 main {
   grid-column: 2;
@@ -331,9 +342,20 @@ main {
     gap: 0;
   }
   .sidebar .brand,
-  .sidebar .nav-sep,
   .sidebar .nav-secondary {
+  display: contents;
+}
+.reader-side .tabs button {
+  padding: 8px 8px;
+}
+.nav-sep {
     display: none;
+  }
+  .plan-item {
+    flex-wrap: wrap;
+  }
+  .plan-item .grow {
+    flex-basis: calc(100% - 60px);
   }
   .nav-item {
     flex-direction: column;
