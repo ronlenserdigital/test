@@ -29,7 +29,7 @@ Last updated: 2026-10-09. Working branch: `claude/nifty-turing-qlthw5`. App root
 
 ## Remaining work
 
-1. **Windows device verification** — run docs/MANUAL_TESTS.md §Windows on a real Windows 10/11 machine using the CI artifact.
+1. **Windows device verification** — CI build passes (run 37862859230); run docs/MANUAL_TESTS.md §Windows on a real Windows 10/11 machine using the CI artifact.
 2. **Code signing** — Windows: obtain an Authenticode certificate and set `bundle.windows.certificateThumbprint` (or Azure Trusted Signing); macOS: Developer ID + notarisation (`APPLE_*` env vars in CI). Unsigned builds trigger SmartScreen/Gatekeeper warnings.
 3. **Linux speech** — implement a native `SpeechEngine` adapter (e.g. speech-dispatcher via a Rust command) for WebKitGTK builds without Web Speech.
 4. **Mobile** — `npx tauri android init` / `npx tauri ios init`, add mobile capability files, verify touch reader selection, background audio and timer behaviour; secure key storage on Android is not implemented (AI disabled there).

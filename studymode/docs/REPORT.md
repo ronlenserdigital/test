@@ -12,7 +12,7 @@ Date: 2026-10-09. Environment: Linux container (Ubuntu 24.04, Node 22.22, Rust 1
 | Rust unit tests | `cargo test` | Pass (file-key traversal guard) |
 | Native release build | `npx tauri build --bundles deb` | Pass — `StudyMode_0.1.0_amd64.deb` (3.8 MB) |
 | Native run (Linux, Xvfb) | launched binary, drove with xdotool | Pass — migrations applied in `~/.local/share/com.studymode.app/studymode.sqlite3`; sample data written through native SQLite + file store; data intact after kill + relaunch; read-aloud "unavailable" state shown (WebKitGTK built without speech) |
-| Windows / macOS / Linux CI builds | `.github/workflows/studymode.yml` | Added; results depend on the GitHub Actions run for this branch (see PR/Actions tab) |
+| CI run 37862859230 (GitHub Actions) | `.github/workflows/studymode.yml` | **All 4 jobs pass**: typecheck + Vitest + Playwright (ubuntu-24.04); `cargo test` + unsigned `tauri build` on **windows-latest**, **macos-latest**, ubuntu-24.04; bundles uploaded as artifacts |
 
 The main e2e test performs the acceptance workflow end to end: create certification → set goal → import Markdown → highlight, note, flashcard from selection → read aloud across a section boundary with pause/resume/stop and no overlap → review the card → write a question → study-mode quiz with immediate explanation → submit → mistake queue → 25-minute focus session (simulated clock) saved with focus/break split → progress shows the session and reviews → reload: materials, cards, sessions, mistakes, reading position survive → export backup → wipe storage → restore → data and highlights back.
 
@@ -33,8 +33,8 @@ Other e2e tests: missing-voice guidance; warm tint persists, doesn't block click
 | Platform | Build | Run | Notes |
 |---|---|---|---|
 | Linux (Ubuntu 24.04) | Verified | Verified (Xvfb) | No speech in this WebKitGTK build |
-| Windows 10/11 | CI only | **Unverified** | Primary target; needs the manual checklist |
-| macOS | CI only | **Unverified** | |
+| Windows 10/11 | Verified in CI (MSI + NSIS built) | **Unverified** | Primary target; run the manual checklist on a device |
+| macOS | Verified in CI | **Unverified** | |
 | Android / iOS | Not generated | **Unverified** | Needs SDK/NDK / Xcode |
 | Browser (dev) | Verified | Verified (Chromium) | Development/testing build |
 
